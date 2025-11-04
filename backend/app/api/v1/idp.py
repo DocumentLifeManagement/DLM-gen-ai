@@ -1,13 +1,17 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 import boto3
 import uuid
 import os
 from .text_parser import *
 from dotenv import load_dotenv
+from app.models.document import Document, TextractJob
+from app.core.database import get_db
+from sqlalchemy.orm import Session
 
 load_dotenv()
 
 router = APIRouter()
+
 S3_BUCKET = os.getenv("S3_BUCKET_NAME", "be-project-documents-bucket")
 AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 s3_client = boto3.client("s3", region_name=AWS_REGION)
@@ -31,7 +35,7 @@ def get_textract_job_results(job_id, max_pages=1000):
     return blocks
 
 @router.post("/upload-and-analyze", status_code=status.HTTP_202_ACCEPTED)
-async def upload_and_analyze(file: UploadFile = File(...)):
+async def upload_and_analyze(file: UploadFile = File(...), db: Session = Depends(get_db)):
     # Validate file type
     if file.content_type not in ["application/pdf", "image/png", "image/jpeg"]:
         raise HTTPException(status_code=400, detail="Unsupported file type.")
@@ -40,11 +44,32 @@ async def upload_and_analyze(file: UploadFile = File(...)):
     file_extension = file.filename.split(".")[-1]
     key = f"documents/{str(uuid.uuid4())}.{file_extension}"
     s3_client.upload_fileobj(file.file, S3_BUCKET, key)
+
+    doc = Document(
+        s3_bucket=S3_BUCKET,
+        s3_key=key,
+        filename=file.filename,
+        mime_type=file.content_type,
+        status="UPLOADED"
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
     
     # Start Textract Job
     job_id = start_textract_job(S3_BUCKET, key)
     
-    return {"job_id": job_id, "s3_key": key, "bucket": S3_BUCKET}
+    tx_job = TextractJob(
+        document_id=doc.id,
+        job_id=job_id,
+        feature_types="FORMS,TABLES",
+        status="IN_PROGRESS"
+    )
+    db.add(tx_job)
+    db.commit()
+    db.refresh(tx_job)
+
+    return {"document_id": doc.id, "job_id": job_id}
 
 @router.get("/results/{job_id}")
 def get_results(job_id: str):
