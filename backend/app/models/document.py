@@ -25,7 +25,7 @@ class TextractJob(Base):
     document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
     job_id = Column(String, unique=True, index=True, nullable=False)
     feature_types = Column(String)  # e.g., "FORMS,TABLES"
-    status = Column(String, index=True)  # IN_PROGRESS, SUCCEEDED, FAILED
+    status = Column(String, default="IN_PROGRESS", index=True)  # IN_PROGRESS, SUCCEEDED, FAILED
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime)
     error = Column(Text)

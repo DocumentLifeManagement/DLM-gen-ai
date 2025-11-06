@@ -1,7 +1,21 @@
 from fastapi import FastAPI
 from app.api.router import api_router
+from app.core.scheduler import start_scheduler, scheduler
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="Document Lifecycle Backend", version="1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ---- Startup ----
+    start_scheduler()
+    print("🚀 FastAPI app started and APScheduler is running.")
+    
+    yield  # 👈 this is where your app runs
+    
+    # ---- Shutdown ----
+    scheduler.shutdown(wait=False)
+    print("🛑 APScheduler stopped. FastAPI app shutting down.")
+
+app = FastAPI(title="Document Lifecycle Backend", lifespan=lifespan)
 
 @app.get("/")
 async def root():
