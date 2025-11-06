@@ -5,6 +5,7 @@ import boto3
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.document import TextractJob, Document
+from app.services.textract_result_handler import handle_completed_textract_job
 
 scheduler = BackgroundScheduler()
 
@@ -26,7 +27,8 @@ def check_textract_jobs():
             response = textract.get_document_analysis(JobId=job.job_id)
             status = response["JobStatus"]
 
-            if status == "SUCCEEDED":
+            if status == "SUCCEEDED" and job.status != "COMPLETED":
+                handle_completed_textract_job(job)
                 job.status = "COMPLETED"
                 job.completed_at = datetime.utcnow()
                 job.document.status = "PROCESSED"
@@ -44,6 +46,6 @@ def check_textract_jobs():
     db.close()
 
 def start_scheduler():
-    scheduler.add_job(check_textract_jobs, "interval", minutes=1, id="textract_job_checker")
+    scheduler.add_job(check_textract_jobs, "interval", minutes=0.5, id="textract_job_checker")
     scheduler.start()
-    print("🕓 APScheduler started: checking every 1 minutes.")
+    print("🕓 APScheduler started: checking every 30 seconds.")

@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 import boto3
 import uuid
 import os
-from .text_parser import *
+from ...utils.text_parser import *
 from dotenv import load_dotenv
 from app.models.document import Document, TextractJob
 from app.core.database import get_db
