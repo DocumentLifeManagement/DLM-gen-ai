@@ -14,7 +14,7 @@ class Document(Base):
     filename = Column(String, nullable=False)
     mime_type = Column(String)
     pages = Column(Integer)
-    status = Column(String, default="UPLOADED")
+    status = Column(String, default="INGESTED")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     jobs = relationship("TextractJob", back_populates="document")

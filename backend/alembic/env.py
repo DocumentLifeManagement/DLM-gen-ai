@@ -13,6 +13,7 @@ from app.core.database import Base
 from app.models.document import * 
 from app.models.role import *
 from app.models.user import *
+from app.models.document_lifecycle import *
 
 # this is the Alembic Config object, which provides
 config = context.config
