@@ -75,7 +75,7 @@ async def upload_and_analyze(file: UploadFile = File(...), db: Session = Depends
         s3_key=key,
         filename=file.filename,
         mime_type=file.content_type,
-        status="UPLOADED"
+        status="INGESTED"
     )
     db.add(doc)
     db.commit()

@@ -1,4 +1,3 @@
-# app/services/lifecycle_rules.py
 ALLOWED_TRANSITIONS = {
     "INGESTED": ["EXTRACTING"],
     "EXTRACTING": ["EXTRACTED"],
