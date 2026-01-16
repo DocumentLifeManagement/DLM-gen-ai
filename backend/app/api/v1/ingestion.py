@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, status
 import boto3
 import uuid, os
 from dotenv import load_dotenv
+from app.core.rbac import require_role
 
 load_dotenv()
 
