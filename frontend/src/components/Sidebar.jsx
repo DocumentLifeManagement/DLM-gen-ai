@@ -1,22 +1,14 @@
 import React from "react";
-import { useRouter } from "../routerr/useRouter.jsx";
+import { useRouter } from "../router/useRouter.jsx";
 
 export default function Sidebar({ role }) {
   const { currentPath, navigate } = useRouter();
 
   const links = {
-    uploader: [
-      { path: "/uploader", label: "Uploader Dashboard" },
-    ],
-    reviewer: [
-      { path: "/reviewer", label: "Reviewer Dashboard" },
-    ],
-    approver: [
-      { path: "/approver", label: "Approver Dashboard" },
-    ],
-    admin: [
-      { path: "/admin", label: "Admin Dashboard" },
-    ],
+    uploader: [{ path: "/uploader", label: "Uploader Dashboard" }],
+    reviewer: [{ path: "/reviewer", label: "Reviewer Dashboard" }],
+    approver: [{ path: "/approver", label: "Approver Dashboard" }],
+    admin: [{ path: "/admin", label: "Admin Dashboard" }],
   };
 
   return (
