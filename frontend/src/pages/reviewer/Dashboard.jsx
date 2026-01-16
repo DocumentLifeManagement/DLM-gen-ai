@@ -1,16 +1,40 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar";
 import Navbar from "../../components/Navbar";
 
 export default function ReviewerDashboard({ navigate }) {
-  const userRole = "reviewer"; // can also fetch from localStorage
-  const [documents, setDocuments] = useState([
-    { id: 1, name: "Invoice 001", status: "Needs Review", uploaded: "2026-01-15" },
-    { id: 2, name: "Contract A", status: "Low Confidence", uploaded: "2026-01-14" },
-    { id: 3, name: "Report B", status: "Needs Review", uploaded: "2026-01-13" },
-  ]);
+  const userRole = "reviewer";
+  const [documents, setDocuments] = useState([]);
+  const [error, setError] = useState("");
 
-  // Navigate to ReviewDoc page
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+
+      const response = await fetch(
+        "http://localhost:8000/api/v1/models/document",
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load documents");
+      }
+
+      setDocuments(await response.json());
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const handleReview = (id) => {
     navigate(`/reviewer/document/${id}`);
   };
@@ -21,30 +45,25 @@ export default function ReviewerDashboard({ navigate }) {
       <div className="flex-1">
         <Navbar navigate={navigate} userRole={userRole} />
         <div className="p-8">
-          <h1 className="text-2xl font-bold mb-6 text-blue-400">Reviewer Dashboard</h1>
+          <h1 className="text-2xl font-bold mb-6 text-blue-400">
+            Reviewer Dashboard
+          </h1>
+
+          {error && <p className="text-red-400">{error}</p>}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="bg-gray-800 p-4 rounded-lg hover:bg-gray-700 transition shadow-md relative"
+                className="bg-gray-800 p-4 rounded-lg hover:bg-gray-700"
               >
                 <h3 className="font-semibold text-lg">{doc.name}</h3>
-                <p>
-                  Status:{" "}
-                  <span
-                    className={`${
-                      doc.status === "Needs Review" ? "text-yellow-400" : "text-red-400"
-                    } font-semibold`}
-                  >
-                    {doc.status}
-                  </span>
-                </p>
+                <p>Status: {doc.status}</p>
                 <p>Uploaded: {doc.uploaded}</p>
 
                 <button
                   onClick={() => handleReview(doc.id)}
-                  className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                  className="mt-4 bg-blue-500 px-4 py-2 rounded"
                 >
                   Review Document
                 </button>

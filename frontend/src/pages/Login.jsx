@@ -8,36 +8,34 @@ export default function Login({ navigate }) {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/v1/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password, role }),
-      });
+      const response = await fetch(
+        "http://localhost:8000/api/v1/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, role }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Invalid credentials");
       }
 
       const data = await response.json();
-      // Store token in localStorage
+
+      // ✅ REQUIRED FOR PROTECTED ROUTE
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("token_type", data.token_type);
-      console.log(data);
+      localStorage.setItem("role", role.toLowerCase());
 
-      // Redirect to role-specific dashboard
-      const roleRoutes = {
-        ADMIN: "/admin/dashboard",
-        UPLOADER: "/uploader/dashboard",
-        REVIEWER: "/reviewer/dashboard",
-        APPROVER: "/approver/dashboard",
-      };
+      // ✅ VALID ROUTES (MATCH App.jsx)
+      if (role === "REVIEWER") navigate("/reviewer");
+      else if (role === "UPLOADER") navigate("/uploader");
+      else if (role === "APPROVER") navigate("/approver");
+      else if (role === "ADMIN") navigate("/admin");
 
-      const dashboardRoute = roleRoutes[role] || "/dashboard";
-      navigate(dashboardRoute);
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -47,36 +45,41 @@ export default function Login({ navigate }) {
         <h1 className="text-3xl font-bold mb-6 text-blue-400 text-center">
           DLM Agent
         </h1>
+
         {error && <div className="mb-4 text-red-500 font-bold">{error}</div>}
+
         <div className="flex flex-col gap-4">
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="p-3 rounded bg-gray-800 border border-blue-500 placeholder-blue-400 text-white outline-none focus:ring-2 focus:ring-blue-500"
+            className="p-3 rounded bg-gray-800 border border-blue-500"
           />
+
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="p-3 rounded bg-gray-800 border border-blue-500 placeholder-blue-400 text-white outline-none focus:ring-2 focus:ring-blue-500"
+            className="p-3 rounded bg-gray-800 border border-blue-500"
           />
+
           <select
-            placeholder="Select Role"
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="p-3 rounded bg-gray-800 border border-blue-500 text-white outline-none"
+            className="p-3 rounded bg-gray-800 border border-blue-500"
           >
+            <option value="">Select Role</option>
             <option value="ADMIN">Admin</option>
             <option value="UPLOADER">Uploader</option>
             <option value="REVIEWER">Reviewer</option>
             <option value="APPROVER">Approver</option>
           </select>
+
           <button
             onClick={handleLogin}
-            className="bg-blue-600 hover:bg-blue-500 py-3 rounded font-bold text-white transition-all transform hover:scale-105"
+            className="bg-blue-600 hover:bg-blue-500 py-3 rounded font-bold"
           >
             Login
           </button>

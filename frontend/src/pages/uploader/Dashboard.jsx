@@ -1,32 +1,82 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar";
 import Navbar from "../../components/Navbar";
 
-export default function Dashboard() {
-  const [documents, setDocuments] = useState([
-    { id: 1, name: "Invoice 001", status: "Pending", uploaded: "2026-01-15" },
-    { id: 2, name: "Contract A", status: "Processed", uploaded: "2026-01-14" },
-  ]);
-
+export default function UploaderDashboard({ navigate }) {
+  const [documents, setDocuments] = useState([]);
+  const [error, setError] = useState("");
   const role = "uploader"; // fetch from localStorage if needed
 
+  // Fetch documents from backend on load
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("http://localhost:8000/api/v1/documents/uploader/", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Failed to load documents");
+
+      const data = await response.json();
+      setDocuments(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   // Handle file upload
-  const handleUpload = (event) => {
+  const handleUpload = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      const newDoc = {
-        id: Date.now(),
-        name: file.name,
-        status: "Pending",
-        uploaded: new Date().toISOString().split("T")[0],
-      };
+    if (!file) return;
+
+    try {
+      const token = localStorage.getItem("access_token");
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("http://localhost:8000/api/v1/documents/upload/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Upload failed");
+
+      const newDoc = await response.json();
+      // Prepend to documents list
       setDocuments([newDoc, ...documents]);
+    } catch (err) {
+      setError(err.message);
     }
   };
 
   // Handle delete
-  const handleDelete = (id) => {
-    setDocuments(documents.filter((doc) => doc.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(`http://localhost:8000/api/v1/documents/${id}/delete/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Delete failed");
+
+      setDocuments(documents.filter((doc) => doc.id !== id));
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -36,6 +86,8 @@ export default function Dashboard() {
         <Navbar role={role} />
         <div className="p-8">
           <h1 className="text-2xl font-bold mb-6 text-blue-400">Uploader Dashboard</h1>
+
+          {error && <p className="text-red-400 mb-4">{error}</p>}
 
           {/* Upload Area */}
           <div className="mb-6">
@@ -57,7 +109,7 @@ export default function Dashboard() {
                   Status: <span className="text-blue-400">{doc.status}</span>
                 </p>
                 <p>Uploaded: {doc.uploaded}</p>
-                
+
                 {/* Delete Button */}
                 <button
                   onClick={() => handleDelete(doc.id)}
@@ -67,6 +119,10 @@ export default function Dashboard() {
                 </button>
               </div>
             ))}
+
+            {documents.length === 0 && !error && (
+              <p className="text-gray-400">No uploaded documents yet.</p>
+            )}
           </div>
         </div>
       </div>

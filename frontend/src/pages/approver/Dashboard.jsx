@@ -1,31 +1,86 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar";
 import Navbar from "../../components/Navbar";
 
 export default function ApproverDashboard({ navigate }) {
-  const userRole = "approver"; // can also fetch from localStorage
+  const userRole = "approver"; // fetch from localStorage if needed
+  const [approvals, setApprovals] = useState([]);
+  const [error, setError] = useState("");
 
-  const [approvals, setApprovals] = useState([
-    { id: 201, name: "Invoice 003", status: "Pending Approval" },
-    { id: 202, name: "Contract B", status: "Pending Approval" },
-  ]);
+  useEffect(() => {
+    fetchApprovals();
+  }, []);
+
+  // Fetch documents assigned for approval
+  const fetchApprovals = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+
+      const response = await fetch(
+        "http://localhost:8000/api/v1/documents/approver/",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load documents for approval");
+      }
+
+      const data = await response.json();
+      setApprovals(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   // Handle approve action
-  const handleApprove = (id) => {
-    setApprovals(
-      approvals.map((doc) =>
-        doc.id === id ? { ...doc, status: "Approved" } : doc
-      )
-    );
+  const handleApprove = async (id) => {
+    try {
+      const token = localStorage.getItem("access_token");
+
+      const response = await fetch(
+        `http://localhost:8000/api/v1/documents/approver/${id}/approve`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to approve document");
+      }
+
+      // Update UI locally
+      setApprovals(
+        approvals.map((doc) =>
+          doc.id === id ? { ...doc, status: "Approved" } : doc
+        )
+      );
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
     <div className="flex bg-gray-900 min-h-screen text-white">
       <Sidebar role={userRole} />
       <div className="flex-1">
-        <Navbar navigate={navigate} userRole={userRole} />
+        <Navbar role={userRole} navigate={navigate} />
+
         <div className="p-8">
-          <h1 className="text-2xl font-bold mb-6 text-blue-400">Approver Dashboard</h1>
+          <h1 className="text-2xl font-bold mb-6 text-blue-400">
+            Approver Dashboard
+          </h1>
+
+          {error && <p className="text-red-400 mb-4">{error}</p>}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {approvals.map((doc) => (
@@ -40,7 +95,9 @@ export default function ApproverDashboard({ navigate }) {
                     className={`${
                       doc.status === "Pending Approval"
                         ? "text-yellow-400"
-                        : "text-green-400"
+                        : doc.status === "Approved"
+                        ? "text-green-400"
+                        : "text-red-400"
                     } font-semibold`}
                   >
                     {doc.status}
@@ -60,6 +117,12 @@ export default function ApproverDashboard({ navigate }) {
                 </button>
               </div>
             ))}
+
+            {approvals.length === 0 && !error && (
+              <p className="text-gray-400">
+                No documents pending approval.
+              </p>
+            )}
           </div>
         </div>
       </div>
