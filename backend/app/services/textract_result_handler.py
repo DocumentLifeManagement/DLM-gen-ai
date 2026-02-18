@@ -62,7 +62,7 @@ def handle_completed_textract_job(job: TextractJob):
         db.add(textract_raw)
     job.status = "COMPLETED"
     job.completed_at = datetime.utcnow()
-    job.document.status = "PROCESSED"
+    job.document.status = "REVIEW_PENDING"
     job.results_s3_key = result_key  # add this column if not already
 
     db.commit()

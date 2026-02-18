@@ -8,6 +8,7 @@ from app.models.document import Document, TextractJob
 from app.core.database import get_db
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
+from app.core.rbac import require_role
 
 load_dotenv()
 
@@ -60,7 +61,11 @@ def get_textract_job_results(job_id, max_pages=1000):
     return blocks
 
 @router.post("/upload-and-analyze", status_code=status.HTTP_202_ACCEPTED)
-async def upload_and_analyze(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_and_analyze(
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role(["UPLOADER"]))
+):
     # Validate file type
     if file.content_type not in ["application/pdf", "image/png", "image/jpeg"]:
         raise HTTPException(status_code=400, detail="Unsupported file type.")
@@ -75,7 +80,7 @@ async def upload_and_analyze(file: UploadFile = File(...), db: Session = Depends
         s3_key=key,
         filename=file.filename,
         mime_type=file.content_type,
-        status="UPLOADED"
+        status="INGESTED"
     )
     db.add(doc)
     db.commit()
@@ -83,7 +88,13 @@ async def upload_and_analyze(file: UploadFile = File(...), db: Session = Depends
     
     job = start_textract_job(doc.id, S3_BUCKET, key)
     
-    return {"document_id": doc.id, "job_id": job.job_id}
+    return {
+        "id": doc.id,
+        "filename": doc.filename,
+        "status": doc.status,
+        "created_at": doc.created_at.isoformat(),
+        "job_id": job.job_id
+    }
 
 @router.get("/results/{job_id}")
 def get_results(job_id: str):

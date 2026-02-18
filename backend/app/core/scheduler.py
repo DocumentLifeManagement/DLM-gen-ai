@@ -31,7 +31,7 @@ def check_textract_jobs():
                 handle_completed_textract_job(job)
                 job.status = "COMPLETED"
                 job.completed_at = datetime.utcnow()
-                job.document.status = "PROCESSED"
+                job.document.status = "REVIEW_PENDING"
                 print(f"✅ Job {job.job_id} completed for document {job.document_id}")
 
             elif status == "FAILED":
