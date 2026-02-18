@@ -7,6 +7,12 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ---- Startup ----
+    from app.core.database import engine, Base
+    from sqlalchemy import text
+    import app.models # ensure all models are imported for metadata
+    # Base.metadata.create_all(bind=engine) # Manual migration removed as per instruction
+    
+    
     start_scheduler()
     print("🚀 FastAPI app started and APScheduler is running.")
     

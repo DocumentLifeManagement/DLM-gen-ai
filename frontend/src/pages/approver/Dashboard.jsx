@@ -233,9 +233,10 @@ export default function ApproverDashboard({ navigate }) {
       <div className="bg-brand-900 border border-brand-800 rounded-xl overflow-hidden shadow-xl">
         {/* Header */}
         <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-brand-800 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-brand-950/50">
-          <div className="col-span-12 md:col-span-5">Document</div>
-          <div className="hidden md:block md:col-span-3">Date</div>
-          <div className="col-span-6 md:col-span-2">Status</div>
+          <div className="col-span-12 md:col-span-4">Document</div>
+          <div className="hidden md:block md:col-span-2">Date</div>
+          <div className="hidden md:block md:col-span-2">Time</div>
+          <div className="col-span-6 md:col-span-2 text-center">Status</div>
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
 
@@ -258,8 +259,8 @@ export default function ApproverDashboard({ navigate }) {
                   className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-brand-800/30 transition-colors group cursor-pointer"
                   onClick={() => navigate(`/approver/document/${doc.id}`)} // Assuming detail view exists or we can add it
                 >
-                  <div className="col-span-12 md:col-span-5 font-medium text-white flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${doc.status === 'APPROVAL_PENDING' || doc.status === 'REVIEWED' ? 'bg-orange-500/10 text-orange-400' : 'bg-brand-800 text-slate-400'}`}>
+                  <div className="col-span-12 md:col-span-4 font-medium text-white flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-brand-800 flex items-center justify-center text-slate-400 shrink-0">
                       <FileText size={20} />
                     </div>
                     <div className="truncate">
@@ -267,14 +268,14 @@ export default function ApproverDashboard({ navigate }) {
                       <p className="md:hidden text-xs text-slate-500 mt-1">{new Date(doc.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <div className="hidden md:block md:col-span-3 text-slate-400 text-sm">
+                  <div className="hidden md:block md:col-span-2 text-slate-400 text-sm">
                     {new Date(doc.created_at).toLocaleDateString()}
-                    <span className="block text-xs opacity-60 m-1">
-                      {new Date(doc.created_at).toLocaleTimeString()}
-                    </span>
                   </div>
-                  <div className="col-span-6 md:col-span-2">
-                    <span className={`text-[10px] md:text-xs px-2.5 py-1 rounded-full border font-medium ${statusBadge(doc.status)}`}>
+                  <div className="hidden md:block md:col-span-2 text-slate-500 text-xs font-mono">
+                    {new Date(doc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div className="col-span-6 md:col-span-2 flex justify-center">
+                    <span className={`text-[9px] md:text-[10px] px-3 py-1 rounded-full border font-black uppercase tracking-tight whitespace-nowrap ${statusBadge(doc.status)}`}>
                       {doc.status ? doc.status.replace("_", " ") : "INGESTED"}
                     </span>
                   </div>

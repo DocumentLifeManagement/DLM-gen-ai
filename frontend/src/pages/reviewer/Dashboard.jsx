@@ -82,21 +82,29 @@ export default function ReviewerDashboard({ navigate }) {
   const handleApprove = async (id, e) => {
     e.stopPropagation(); // Prevent row click
 
+    const token = localStorage.getItem("access_token");
+
     // Optimistic update
     const updated = documents.map((doc) =>
-      doc.id === id ? { ...doc, status: "REVIEWED" } : doc
+      doc.id === id ? { ...doc, status: "APPROVAL_PENDING" } : doc
     );
     setDocuments(updated);
 
     try {
-      await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/approve`,
-        { method: "POST" }
+      const res = await fetch(
+        `http://localhost:8000/api/v1/documents/${id}/review`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        }
       );
 
-      showToast("Document approved successfully");
-    } catch {
-      showToast("Approval failed");
+      if (!res.ok) throw new Error("Verification rejected by system");
+
+      showToast("Verification complete. Document sent to Approval queue.");
+      fetchDocuments(); // Final sync
+    } catch (err) {
+      showToast(err.message || "Verification failed");
       fetchDocuments();
     }
   };
@@ -114,9 +122,11 @@ export default function ReviewerDashboard({ navigate }) {
   const statusBadge = (status) => {
     const styles = {
       UPLOADED: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-      PROCESSING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-      NEEDS_REVIEW: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+      PROCESSING: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      REVIEW_PENDING: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+      APPROVAL_PENDING: "bg-green-500/10 text-green-400 border-green-500/20",
       REVIEWED: "bg-green-500/10 text-green-400 border-green-500/20",
+      REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
       FAILED: "bg-red-500/10 text-red-400 border-red-500/20",
     };
     return styles[status] || "bg-slate-500/10 text-slate-400 border-slate-500/20";
@@ -124,8 +134,8 @@ export default function ReviewerDashboard({ navigate }) {
 
   // Stats
   const total = documents.length;
-  const pending = documents.filter(d => d.status === "NEEDS_REVIEW").length;
-  const reviewed = documents.filter(d => d.status === "REVIEWED").length;
+  const pending = documents.filter(d => d.status === "REVIEW_PENDING").length;
+  const reviewed = documents.filter(d => d.status === "REVIEWED" || d.status === "APPROVAL_PENDING").length;
 
   return (
     <DashboardLayout role={userRole} navigate={navigate} title="Review Dashboard">
@@ -159,7 +169,7 @@ export default function ReviewerDashboard({ navigate }) {
               className="w-full md:w-40 bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
             >
               <option value="ALL">All Status</option>
-              <option value="NEEDS_REVIEW">Needs Review</option>
+              <option value="REVIEW_PENDING">Review Pending</option>
               <option value="REVIEWED">Reviewed</option>
               <option value="PROCESSING">Processing</option>
             </select>
@@ -183,9 +193,10 @@ export default function ReviewerDashboard({ navigate }) {
       <div className="bg-brand-900 border border-brand-800 rounded-xl overflow-hidden shadow-xl">
         {/* Header */}
         <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-brand-800 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-brand-950/50">
-          <div className="col-span-12 md:col-span-5">Document</div>
-          <div className="hidden md:block md:col-span-3">Date</div>
-          <div className="col-span-6 md:col-span-2">Status</div>
+          <div className="col-span-12 md:col-span-4">Document</div>
+          <div className="hidden md:block md:col-span-2">Date</div>
+          <div className="hidden md:block md:col-span-2">Time</div>
+          <div className="col-span-6 md:col-span-2 text-center">Status</div>
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
 
@@ -208,7 +219,7 @@ export default function ReviewerDashboard({ navigate }) {
                   className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-brand-800/30 transition-colors group cursor-pointer"
                   onClick={() => navigate(`/reviewer/document/${doc.id}`)}
                 >
-                  <div className="col-span-12 md:col-span-5 font-medium text-white flex items-center gap-4">
+                  <div className="col-span-12 md:col-span-4 font-medium text-white flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${doc.status === 'NEEDS_REVIEW' ? 'bg-orange-500/10 text-orange-400' : 'bg-brand-800 text-slate-400'}`}>
                       <FileText size={20} />
                     </div>
@@ -217,14 +228,14 @@ export default function ReviewerDashboard({ navigate }) {
                       <p className="md:hidden text-xs text-slate-500 mt-1">{new Date(doc.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <div className="hidden md:block md:col-span-3 text-slate-400 text-sm">
+                  <div className="hidden md:block md:col-span-2 text-slate-400 text-sm">
                     {new Date(doc.created_at).toLocaleDateString()}
-                    <span className="block text-xs opacity-60 m-1">
-                      {new Date(doc.created_at).toLocaleTimeString()}
-                    </span>
                   </div>
-                  <div className="col-span-6 md:col-span-2">
-                    <span className={`text-[10px] md:text-xs px-2.5 py-1 rounded-full border font-medium ${statusBadge(doc.status)}`}>
+                  <div className="hidden md:block md:col-span-2 text-slate-500 text-xs font-mono">
+                    {new Date(doc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div className="col-span-6 md:col-span-2 flex justify-center">
+                    <span className={`text-[9px] md:text-[10px] px-3 py-1 rounded-full border font-black uppercase tracking-tight whitespace-nowrap ${statusBadge(doc.status)}`}>
                       {doc.status ? doc.status.replace("_", " ") : "INGESTED"}
                     </span>
                   </div>
@@ -236,7 +247,7 @@ export default function ReviewerDashboard({ navigate }) {
                     >
                       <Eye size={18} />
                     </button>
-                    {doc.status === "NEEDS_REVIEW" && (
+                    {doc.status === "REVIEW_PENDING" && (
                       <button
                         onClick={(e) => handleApprove(doc.id, e)}
                         className="p-2 text-slate-400 hover:text-green-400 hover:bg-green-900/30 rounded-lg transition-colors"

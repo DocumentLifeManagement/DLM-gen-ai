@@ -152,11 +152,27 @@ export default function UploaderDashboard({ navigate }) {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const handleOpenPreview = async (doc) => {
+    setPreviewDoc({ ...doc, loading: true });
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`http://localhost:8000/api/v1/documents/${doc.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Could not load details");
+      const details = await res.json();
+      setPreviewDoc(details);
+    } catch (err) {
+      showToast("Error loading document details");
+      setPreviewDoc(null);
+    }
+  };
+
   const statusBadge = (status) => {
     const styles = {
       UPLOADED: "bg-blue-500/10 text-blue-400 border-blue-500/20",
       PROCESSING: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-      NEEDS_REVIEW: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+      REVIEW_PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
       REVIEWED: "bg-orange-500/10 text-orange-400 border-orange-500/20",
       APPROVED: "bg-green-500/10 text-green-400 border-green-500/20",
       FAILED: "bg-red-500/10 text-red-400 border-red-500/20",
@@ -363,7 +379,7 @@ export default function UploaderDashboard({ navigate }) {
                           {doc.status ? doc.status.replace("_", " ") : "INGESTED"}
                         </span>
                         <button
-                          onClick={() => setPreviewDoc(doc)}
+                          onClick={() => handleOpenPreview(doc)}
                           className="text-brand-accent hover:text-white text-xs flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <Eye size={12} /> View
@@ -394,46 +410,76 @@ export default function UploaderDashboard({ navigate }) {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-brand-900 border border-brand-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
+              className="bg-brand-900 border border-brand-800 rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] overflow-hidden flex flex-col"
             >
               <div className="px-6 py-4 border-b border-brand-800 flex justify-between items-center bg-brand-950">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <FileText size={20} className="text-brand-accent" />
-                  Document Details
-                </h3>
-                <button onClick={() => setPreviewDoc(null)} className="text-slate-500 hover:text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-brand-800 flex items-center justify-center text-brand-accent shadow-inner">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white leading-tight">
+                      {previewDoc.filename}
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">System Identifier: {previewDoc.id}</p>
+                  </div>
+                </div>
+                <button onClick={() => setPreviewDoc(null)} className="p-2 hover:bg-white/5 rounded-full transition-colors text-slate-500 hover:text-white">
                   <XCircle size={24} />
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
-                <div className="flex items-center gap-4 p-4 bg-brand-950 rounded-lg border border-brand-800">
-                  <div className="w-12 h-12 bg-brand-900 rounded-lg flex items-center justify-center text-brand-accent">
-                    <File size={24} />
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">{previewDoc.filename}</p>
-                    <p className="text-xs text-slate-500">ID: {previewDoc.id}</p>
-                  </div>
+              <div className="flex-1 overflow-hidden flex flex-col lg:flex-row p-6 gap-6">
+                {/* PDF Side */}
+                <div className="flex-[3] bg-brand-950 rounded-xl border border-brand-800 overflow-hidden relative group">
+                  {previewDoc.loading ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-brand-950">
+                      <div className="w-8 h-8 border-2 border-brand-accent border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <iframe
+                      src={`${previewDoc.s3_url}#toolbar=0`}
+                      className="w-full h-full border-none"
+                      title="Preview Content"
+                    />
+                  )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-brand-950 rounded border border-brand-800">
-                    <p className="text-xs text-slate-500 uppercase mb-1">Status</p>
-                    <span className={`text-xs px-2 py-1 rounded inline-block ${statusBadge(previewDoc.status)}`}>
-                      {previewDoc.status}
-                    </span>
+                {/* Info Side */}
+                <div className="flex-[2] space-y-6 overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-4">
                   </div>
-                  <div className="p-3 bg-brand-950 rounded border border-brand-800">
-                    <p className="text-xs text-slate-500 uppercase mb-1">Uploaded On</p>
-                    <p className="text-sm text-slate-300">{new Date(previewDoc.created_at).toLocaleString()}</p>
+
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contextual Data</h4>
+                    <div className="space-y-2">
+                      {previewDoc.fields?.slice(0, 8).map((f, i) => (
+                        <div key={i} className="flex justify-between items-center p-2 rounded-lg bg-brand-950/40 border border-brand-800/50">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">{f.key}</span>
+                          <span className="text-xs text-white max-w-[150px] truncate">{f.value}</span>
+                        </div>
+                      ))}
+                      {previewDoc.fields?.length > 8 && (
+                        <p className="text-[10px] text-center text-slate-600 italic">+ {previewDoc.fields.length - 8} more fields</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-brand-accent/5 border border-brand-accent/20 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ShieldCheck size={14} className="text-brand-accent" />
+                      <span className="text-[10px] font-bold text-white uppercase">System Status</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      This document is currently in <span className="text-brand-accent font-bold">"{previewDoc.status}"</span> state.
+                      Further audits can be performed by the reviewer team.
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="px-6 py-4 bg-brand-950 border-t border-brand-800 flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setPreviewDoc(null)}>Close</Button>
-                <Button variant="primary">Start Audit</Button>
+              <div className="px-6 py-4 bg-brand-950 border-t border-brand-800 flex justify-end">
+                <Button variant="primary" onClick={() => setPreviewDoc(null)} className="!px-10">Done Viewing</Button>
               </div>
             </motion.div>
           </motion.div>

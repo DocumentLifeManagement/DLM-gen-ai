@@ -42,7 +42,7 @@ def approve_document(
 def reject_document(
     document_id: int,
     db: Session = Depends(get_db),
-    user=Depends(require_role(["APPROVER"]))
+    user=Depends(require_role(["APPROVER", "REVIEWER"]))
 ):
     return LifecycleService.transition(
         db=db,
