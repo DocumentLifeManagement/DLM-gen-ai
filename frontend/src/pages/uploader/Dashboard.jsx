@@ -40,22 +40,14 @@ export default function UploaderDashboard({ navigate }) {
   }, []);
 
   const setupWebSocket = () => {
-    const socket = new WebSocket("ws://localhost:8000/ws/uploader");
-    socket.onmessage = (event) => {
-      const updatedDoc = JSON.parse(event.data);
-      setDocuments((prev) =>
-        prev.map((doc) =>
-          doc.id === updatedDoc.id ? updatedDoc : doc
-        )
-      );
-    };
-    return () => socket.close();
+    // WebSocket logic temporarily disabled until backend support is added
+    return () => { };
   };
 
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("http://localhost:8000/api/v1/documents/uploader/", {
+      const res = await fetch("http://localhost:8000/api/v1/documents", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to load documents");
@@ -107,7 +99,7 @@ export default function UploaderDashboard({ navigate }) {
           updateFileStatus(item.id, { progress: Math.min(90, (Math.random() * 20) + 10) }); // increment
         }, 200);
 
-        const res = await fetch("http://localhost:8000/api/v1/documents/upload/", {
+        const res = await fetch("http://localhost:8000/api/v1/upload-and-analyze", {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: formData,
@@ -368,7 +360,7 @@ export default function UploaderDashboard({ navigate }) {
 
                       <div className="flex items-center justify-between mt-2">
                         <span className={`text-[10px] px-2 py-0.5 rounded border ${statusBadge(doc.status)}`}>
-                          {doc.status.replace("_", " ")}
+                          {doc.status ? doc.status.replace("_", " ") : "INGESTED"}
                         </span>
                         <button
                           onClick={() => setPreviewDoc(doc)}

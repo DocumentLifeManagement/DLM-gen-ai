@@ -88,7 +88,13 @@ async def upload_and_analyze(
     
     job = start_textract_job(doc.id, S3_BUCKET, key)
     
-    return {"document_id": doc.id, "job_id": job.job_id}
+    return {
+        "id": doc.id,
+        "filename": doc.filename,
+        "status": doc.status,
+        "created_at": doc.created_at.isoformat(),
+        "job_id": job.job_id
+    }
 
 @router.get("/results/{job_id}")
 def get_results(job_id: str):

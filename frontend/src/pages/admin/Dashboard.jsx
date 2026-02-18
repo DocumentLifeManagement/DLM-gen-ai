@@ -246,7 +246,7 @@ export default function AdminDashboard({ navigate }) {
                   </div>
                   <div className="col-span-6 md:col-span-3">
                     <span className={`text-[10px] md:text-xs px-2.5 py-1 rounded-full border font-medium ${statusBadge(doc.status)}`}>
-                      {doc.status.replace("_", " ")}
+                      {doc.status ? doc.status.replace("_", " ") : "INGESTED"}
                     </span>
                   </div>
                   <div className="col-span-6 md:col-span-2 flex justify-end gap-2">
