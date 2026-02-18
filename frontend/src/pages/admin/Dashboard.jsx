@@ -1,28 +1,52 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "../../components/Sidebar";
-import Navbar from "../../components/Navbar";
+import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import StatCard from "../../components/dashboard/StatCard";
+import Button from "../../components/landing/Button";
+import {
+  FileText,
+  CheckCircle,
+  XCircle,
+  Search,
+  Filter,
+  Eye,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  SlidersHorizontal,
+  Clock,
+  ShieldAlert,
+  Users
+} from "lucide-react";
 
 export default function AdminDashboard({ navigate }) {
   const userRole = "admin";
 
-  const [users, setUsers] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [filteredDocs, setFilteredDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [toast, setToast] = useState(null);
+  const [page, setPage] = useState(1);
+
+  const limit = 10;
 
   useEffect(() => {
-    fetchUsers();
-    setupWebSocket();
+    fetchDocuments();
   }, []);
 
-  /* -----------------------------
-     INITIAL FETCH FROM BACKEND
-  ------------------------------*/
-  const fetchUsers = async () => {
+  useEffect(() => {
+    applyFilters();
+  }, [documents, search, statusFilter, sortOrder]);
+
+  const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem("access_token");
 
       const res = await fetch(
-        "http://localhost:8000/api/v1/admin/users",
+        "http://localhost:8000/api/v1/documents",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -30,10 +54,11 @@ export default function AdminDashboard({ navigate }) {
         }
       );
 
-      if (!res.ok) throw new Error("Failed to fetch users");
+      if (!res.ok) throw new Error("Failed to fetch documents");
 
       const data = await res.json();
-      setUsers(data);
+      // Mock data if empty to show the UI
+      setDocuments(data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -41,76 +66,37 @@ export default function AdminDashboard({ navigate }) {
     }
   };
 
-  /* -----------------------------
-     REAL-TIME WEBSOCKET
-  ------------------------------*/
-  const setupWebSocket = () => {
-    const socket = new WebSocket("ws://localhost:8000/ws/admin");
+  const applyFilters = () => {
+    let temp = [...documents];
 
-    socket.onmessage = (event) => {
-      const message = JSON.parse(event.data);
+    if (statusFilter !== "ALL") {
+      temp = temp.filter((doc) => doc.status === statusFilter);
+    }
 
-      switch (message.type) {
-        case "USER_UPDATE":
-          setUsers((prev) => {
-            const exists = prev.find(
-              (u) => u.id === message.payload.id
-            );
-            if (exists) {
-              return prev.map((u) =>
-                u.id === message.payload.id
-                  ? message.payload
-                  : u
-              );
-            } else {
-              return [...prev, message.payload];
-            }
-          });
-          break;
+    if (search) {
+      temp = temp.filter((doc) =>
+        doc.filename.toLowerCase().includes(search.toLowerCase())
+      );
+    }
 
-        case "USER_DELETE":
-          setUsers((prev) =>
-            prev.filter((u) => u.id !== message.payload.id)
-          );
-          break;
+    temp.sort((a, b) =>
+      sortOrder === "asc"
+        ? new Date(a.created_at) - new Date(b.created_at)
+        : new Date(b.created_at) - new Date(a.created_at)
+    );
 
-        case "ROLE_CHANGE":
-          setUsers((prev) =>
-            prev.map((u) =>
-              u.id === message.payload.id
-                ? { ...u, role: message.payload.role }
-                : u
-            )
-          );
-          break;
-
-        default:
-          break;
-      }
-    };
-
-    socket.onerror = () => {
-      console.error("WebSocket error");
-    };
-
-    return () => socket.close();
+    setFilteredDocs(temp);
   };
 
-  /* -----------------------------
-     DELETE USER
-  ------------------------------*/
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to remove this user?"))
-      return;
+  const handleDelete = async (id, e) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this document? This action cannot be undone.")) return;
 
     try {
       const token = localStorage.getItem("access_token");
 
-      // Optimistic UI
-      setUsers(users.filter((u) => u.id !== id));
-
-      await fetch(
-        `http://localhost:8000/api/v1/admin/users/${id}`,
+      const res = await fetch(
+        `http://localhost:8000/api/v1/documents/${id}`,
         {
           method: "DELETE",
           headers: {
@@ -118,108 +104,205 @@ export default function AdminDashboard({ navigate }) {
           },
         }
       );
+
+      if (!res.ok) throw new Error("Failed to delete");
+
+      setDocuments(docs => docs.filter(d => d.id !== id));
+      showToast("Document deleted successfully");
     } catch (err) {
-      fetchUsers(); // rollback if error
+      showToast("Failed to delete document");
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white p-10">
-        Loading Admin Panel...
-      </div>
-    );
-  }
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const paginatedDocs = filteredDocs.slice(
+    (page - 1) * limit,
+    page * limit
+  );
+
+  const statusBadge = (status) => {
+    const styles = {
+      UPLOADED: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+      PROCESSING: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      NEEDS_REVIEW: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+      REVIEW_PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", // Handle variation
+      REVIEWED: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+      APPROVAL_PENDING: "bg-orange-500/10 text-orange-400 border-orange-500/20", // Handle variation
+      APPROVED: "bg-green-500/10 text-green-400 border-green-500/20",
+      REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
+      FAILED: "bg-red-500/20 text-red-300 border-red-500/30",
+    };
+    return styles[status] || "bg-slate-500/10 text-slate-400 border-slate-500/20";
+  };
+
+  // Stats
+  const total = documents.length;
+  const inReview = documents.filter(d => d.status === "NEEDS_REVIEW" || d.status === "REVIEW_PENDING").length;
+  const inApproval = documents.filter(d => d.status === "REVIEWED" || d.status === "APPROVAL_PENDING").length;
+  const approved = documents.filter(d => d.status === "APPROVED").length;
 
   return (
-    <div className="flex bg-gray-900 min-h-screen text-white">
-      <Sidebar role={userRole} />
+    <DashboardLayout role={userRole} navigate={navigate} title="Admin Controller">
 
-      <div className="flex-1">
-        <Navbar navigate={navigate} userRole={userRole} />
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <StatCard title="Total Documents" value={total} icon={FileText} color="text-brand-accent" />
+        <StatCard title="In Review" value={inReview} icon={Eye} color="text-yellow-400" />
+        <StatCard title="In Approval" value={inApproval} icon={Clock} color="text-orange-400" />
+        <StatCard title="Completed" value={approved} icon={CheckCircle} color="text-green-400" />
+      </div>
 
-        <div className="p-8">
-          <h1 className="text-2xl font-bold mb-6 text-blue-400">
-            Admin Dashboard
-          </h1>
+      {/* Controls */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-center">
+        <div className="relative flex-1 w-full md:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+          <input
+            type="text"
+            placeholder="Search all documents..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-brand-accent transition-colors"
+          />
+        </div>
 
-          {error && (
-            <p className="text-red-400 mb-4">{error}</p>
-          )}
+        <div className="flex gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:flex-none">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full md:w-40 bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
+            >
+              <option value="ALL">All Status</option>
+              <option value="UPLOADED">Uploaded</option>
+              <option value="PROCESSING">Processing</option>
+              <option value="NEEDS_REVIEW">In Review</option>
+              <option value="REVIEWED">In Approval</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
 
-          <div className="overflow-x-auto bg-gray-800 rounded-lg shadow-md">
-            <table className="min-w-full text-left text-white">
-              <thead>
-                <tr>
-                  <th className="px-6 py-3 border-b border-gray-700">
-                    ID
-                  </th>
-                  <th className="px-6 py-3 border-b border-gray-700">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 border-b border-gray-700">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 border-b border-gray-700">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 border-b border-gray-700">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {users.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-gray-700 transition"
-                  >
-                    <td className="px-6 py-4 border-b border-gray-700">
-                      {user.id}
-                    </td>
-
-                    <td className="px-6 py-4 border-b border-gray-700">
-                      {user.name}
-                    </td>
-
-                    <td className="px-6 py-4 border-b border-gray-700">
-                      {user.role}
-                    </td>
-
-                    <td className="px-6 py-4 border-b border-gray-700">
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          user.status === "ACTIVE"
-                            ? "bg-green-600"
-                            : "bg-red-600"
-                        }`}
-                      >
-                        {user.status}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4 border-b border-gray-700">
-                      <button
-                        onClick={() => handleDelete(user.id)}
-                        className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md transition"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {users.length === 0 && (
-              <p className="text-gray-400 p-4">
-                No users found.
-              </p>
-            )}
+          <div className="relative flex-1 md:flex-none">
+            <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="w-full md:w-40 bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Documents List */}
+      <div className="bg-brand-900 border border-brand-800 rounded-xl overflow-hidden shadow-xl">
+        {/* Header */}
+        <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-brand-800 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-brand-950/50">
+          <div className="col-span-12 md:col-span-4">Document / ID</div>
+          <div className="hidden md:block md:col-span-3">Date</div>
+          <div className="col-span-6 md:col-span-3">Process Stage</div>
+          <div className="col-span-6 md:col-span-2 text-right">Actions</div>
+        </div>
+
+        {loading ? (
+          <div className="p-8 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 bg-brand-800/30 animate-pulse rounded-lg" />
+            ))}
+          </div>
+        ) : (
+          <div className="divide-y divide-brand-800">
+            {paginatedDocs.length === 0 ? (
+              <div className="p-12 text-center text-slate-500">
+                No documents found in the system.
+              </div>
+            ) : (
+              paginatedDocs.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-brand-800/30 transition-colors group"
+                >
+                  <div className="col-span-12 md:col-span-4 font-medium text-white flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-brand-800 text-slate-400">
+                      <FileText size={20} />
+                    </div>
+                    <div className="truncate">
+                      <p className="truncate text-sm md:text-base">{doc.filename}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5 font-mono">ID: {doc.id}</p>
+                    </div>
+                  </div>
+                  <div className="hidden md:block md:col-span-3 text-slate-400 text-sm">
+                    {new Date(doc.created_at).toLocaleDateString()}
+                    <span className="block text-xs opacity-60 m-1">
+                      {new Date(doc.created_at).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <div className="col-span-6 md:col-span-3">
+                    <span className={`text-[10px] md:text-xs px-2.5 py-1 rounded-full border font-medium ${statusBadge(doc.status)}`}>
+                      {doc.status.replace("_", " ")}
+                    </span>
+                  </div>
+                  <div className="col-span-6 md:col-span-2 flex justify-end gap-2">
+                    <button
+                      className="p-2 text-slate-400 hover:text-white hover:bg-brand-800 rounded-lg transition-colors"
+                      title="View Details"
+                      onClick={() => { /* Navigate to detail view if exists */ }}
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(doc.id, e)}
+                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
+                      title="Delete Document"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center mt-8 gap-4 items-center">
+        <button
+          disabled={page === 1}
+          onClick={() => setPage(page - 1)}
+          className="p-2 rounded-lg bg-brand-900 border border-brand-800 text-slate-400 hover:text-white hover:border-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronLeft size={20} />
+        </button>
+
+        <span className="text-sm text-slate-400">
+          Page <span className="text-white font-medium">{page}</span>
+        </span>
+
+        <button
+          disabled={page * limit >= filteredDocs.length}
+          onClick={() => setPage(page + 1)}
+          className="p-2 rounded-lg bg-brand-900 border border-brand-800 text-slate-400 hover:text-white hover:border-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 bg-brand-900 border border-brand-700 text-white px-4 py-3 rounded-lg shadow-2xl animate-in slide-in-from-bottom-5 z-50 flex items-center gap-3">
+          <div className={`w-2 h-2 rounded-full ${toast.includes("Failed") ? "bg-red-500" : "bg-green-500"}`} />
+          {toast}
+        </div>
+      )}
+
+    </DashboardLayout>
   );
 }

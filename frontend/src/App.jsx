@@ -3,7 +3,9 @@ import { useRouter } from "./router/useRouter";
 
 import Home from "./pages/homepage/Home";
 import Login from "./pages/homepage/Login";
-import About from "./pages/homepage/About";
+
+import AboutUs from "./pages/homepage/AboutUs";
+import ContactUs from "./pages/homepage/ContactUs";
 
 import UploaderDashboard from "./pages/uploader/Dashboard";
 import ReviewerDashboard from "./pages/reviewer/Dashboard";
@@ -46,7 +48,10 @@ export default function App() {
       return <Login navigate={navigate} />;
 
     case "/about":
-      return <About navigate={navigate} />;
+      return <AboutUs navigate={navigate} />;
+
+    case "/contact":
+      return <ContactUs navigate={navigate} />;
 
     case "/uploader":
       return (
