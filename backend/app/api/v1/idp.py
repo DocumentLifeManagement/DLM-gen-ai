@@ -2,12 +2,11 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 import boto3
 import uuid
 import os
-from ...utils.text_parser import *
+from app.utils.text_parser import extract_key_value_pairs, extract_lines, extract_tables
 from dotenv import load_dotenv
 from app.models.document import Document, TextractJob
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal
 from app.core.rbac import require_role
 
 load_dotenv()
@@ -73,7 +72,12 @@ async def upload_and_analyze(
     # Upload file to S3
     file_extension = file.filename.split(".")[-1]
     key = f"documents/{str(uuid.uuid4())}.{file_extension}"
-    s3_client.upload_fileobj(file.file, S3_BUCKET, key)
+    s3_client.upload_fileobj(
+        file.file, 
+        S3_BUCKET, 
+        key,
+        ExtraArgs={"ContentType": file.content_type}
+    )
 
     doc = Document(
         s3_bucket=S3_BUCKET,
@@ -87,6 +91,8 @@ async def upload_and_analyze(
     db.refresh(doc)
     
     job = start_textract_job(doc.id, S3_BUCKET, key)
+    doc.status = "PROCESSING"
+    db.commit()
     
     return {
         "id": doc.id,
