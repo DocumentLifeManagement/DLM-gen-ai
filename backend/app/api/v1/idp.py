@@ -8,6 +8,7 @@ from app.models.document import Document, TextractJob
 from app.core.database import get_db
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
+from app.core.rbac import require_role
 
 load_dotenv()
 
@@ -60,7 +61,11 @@ def get_textract_job_results(job_id, max_pages=1000):
     return blocks
 
 @router.post("/upload-and-analyze", status_code=status.HTTP_202_ACCEPTED)
-async def upload_and_analyze(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_and_analyze(
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role(["UPLOADER"]))
+):
     # Validate file type
     if file.content_type not in ["application/pdf", "image/png", "image/jpeg"]:
         raise HTTPException(status_code=400, detail="Unsupported file type.")
