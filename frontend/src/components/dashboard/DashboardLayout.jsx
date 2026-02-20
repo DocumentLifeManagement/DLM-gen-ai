@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import DashboardSidebar from "./DashboardSidebar";
+import clsx from "clsx";
 
 export default function DashboardLayout({ children, role, navigate, title }) {
     // Persistent state for sidebar
@@ -12,36 +13,37 @@ export default function DashboardLayout({ children, role, navigate, title }) {
         localStorage.setItem("sidebar_collapsed", isCollapsed);
     }, [isCollapsed]);
 
-    // Mock current path for sidebar active state (simplification)
+    const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+
+    // Mock current path for sidebar active state
     const currentPath = `/${role}`;
 
     return (
-        <div className="min-h-screen bg-brand-950 text-slate-300 font-sans flex overflow-hidden">
+        <div className="min-h-screen bg-brand-950 text-slate-300 font-sans flex">
             <DashboardSidebar
                 role={role}
                 navigate={navigate}
                 activePath={currentPath}
                 isCollapsed={isCollapsed}
-                setIsCollapsed={setIsCollapsed}
+                onToggle={toggleSidebar}
             />
 
-            <main className={`flex-1 ${isCollapsed ? 'ml-20' : 'ml-64'} transition-all duration-300 p-6 md:p-8 overflow-y-auto h-screen`}>
+            <main className={clsx(
+                "flex-1 p-8 overflow-y-auto h-screen transition-all duration-300",
+                isCollapsed ? "ml-20" : "ml-64"
+            )}>
                 <header className="flex justify-between items-center mb-8">
-                    <div className="flex items-center gap-4">
-                        <div>
-                            <h2 className="text-2xl font-bold text-white leading-none tracking-tight">{title}</h2>
-                            <p className="text-sm text-slate-500 mt-2">Authenticated as <span className="text-brand-accent font-bold uppercase">{role}</span></p>
-                        </div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-white">{title}</h2>
+                        <p className="text-sm text-slate-500">Welcome back, {role}</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-brand-800 border border-brand-700 flex items-center justify-center text-white font-bold shadow-lg">
+                        <div className="w-10 h-10 rounded-full bg-brand-800 border border-brand-700 flex items-center justify-center text-white font-bold">
                             {role[0].toUpperCase()}
                         </div>
                     </div>
                 </header>
-                <div className="animate-in fade-in duration-500">
-                    {children}
-                </div>
+                {children}
             </main>
         </div>
     );

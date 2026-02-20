@@ -1,28 +1,18 @@
 import React from "react";
-import {
-    UploadCloud,
-    FileText,
-    CheckCircle,
-    Settings,
-    LogOut,
-    LayoutDashboard,
-    ChevronLeft,
-    ChevronRight
-} from "lucide-react";
+import { UploadCloud, FileText, CheckCircle, Settings, LogOut, LayoutDashboard, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import clsx from "clsx";
 
-export default function DashboardSidebar({ role, navigate, activePath, isCollapsed, setIsCollapsed }) {
+export default function DashboardSidebar({ role, navigate, activePath, isCollapsed, onToggle }) {
     const links = [
         { label: "Dashboard", href: `/${role}`, icon: LayoutDashboard },
         { label: "Uploads", href: "/uploader", icon: UploadCloud, role: "uploader" },
         { label: "Reviews", href: "/reviewer", icon: FileText, role: "reviewer" },
         { label: "Approvals", href: "/approver", icon: CheckCircle, role: "approver" },
         { label: "Admin", href: "/admin", icon: Settings, role: "admin" },
+        { label: "Users", href: "/admin/users", icon: Users, role: "admin" },
     ];
 
     const filteredLinks = links.filter(l => !l.role || l.role === role);
-
-    const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
     return (
         <div className={clsx(
@@ -46,7 +36,7 @@ export default function DashboardSidebar({ role, navigate, activePath, isCollaps
                 </div>
 
                 <button
-                    onClick={toggleSidebar}
+                    onClick={onToggle}
                     className={clsx(
                         "p-1.5 hover:bg-brand-800 rounded-lg text-slate-500 hover:text-white transition-all",
                         isCollapsed ? "shrink-0" : ""
@@ -57,45 +47,50 @@ export default function DashboardSidebar({ role, navigate, activePath, isCollaps
                 </button>
             </div>
 
-            {/* Navigation Links */}
-            <nav className="flex-1 p-3 mt-4 space-y-1 overflow-y-auto custom-scrollbar">
-                {filteredLinks.map((link) => {
-                    const isActive = activePath === link.href || (activePath.startsWith(link.href) && link.href !== `/${role}`);
-                    return (
-                        <button
-                            key={link.label}
-                            onClick={() => navigate(link.href)}
-                            title={isCollapsed ? link.label : ""}
-                            className={clsx(
-                                "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium overflow-hidden whitespace-nowrap group relative",
-                                isActive
-                                    ? "text-white bg-brand-900" // Subtle background for active
-                                    : "text-slate-400 hover:text-white hover:bg-brand-900/50"
-                            )}
-                        >
-                            <link.icon size={18} className={clsx(
-                                "shrink-0",
-                                isActive ? "text-white" : "text-slate-400 group-hover:text-white"
-                            )} />
-                            {!isCollapsed && <span>{link.label}</span>}
-                        </button>
-                    );
-                })}
+            <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
+                {filteredLinks.map((link) => (
+                    <button
+                        key={link.label}
+                        onClick={() => navigate(link.href)}
+                        className={clsx(
+                            "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-sm font-medium relative group",
+                            activePath === link.href || activePath.startsWith(link.href + "/")
+                                ? "bg-brand-900 text-white border border-brand-800"
+                                : "text-slate-400 hover:text-white hover:bg-brand-900/50"
+                        )}
+                        title={isCollapsed ? link.label : ""}
+                    >
+                        <link.icon size={18} className="shrink-0" />
+                        {!isCollapsed && <span className="truncate">{link.label}</span>}
+                        {isCollapsed && (
+                            <div className="absolute left-full ml-4 px-2 py-1 bg-brand-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                                {link.label}
+                            </div>
+                        )}
+                    </button>
+                ))}
             </nav>
 
-            {/* Logout Footer */}
-            <div className="p-3 border-t border-brand-800">
+            <div className="p-4 border-t border-brand-800">
                 <button
                     onClick={() => {
                         localStorage.removeItem("role");
                         localStorage.removeItem("access_token");
                         navigate("/login");
                     }}
+                    className={clsx(
+                        "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium group relative",
+                        isCollapsed && "justify-center px-0"
+                    )}
                     title={isCollapsed ? "Sign Out" : ""}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 text-sm font-medium overflow-hidden whitespace-nowrap group"
                 >
                     <LogOut size={18} className="shrink-0" />
                     {!isCollapsed && <span>Sign Out</span>}
+                    {isCollapsed && (
+                        <div className="absolute left-full ml-4 px-2 py-1 bg-red-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                            Sign Out
+                        </div>
+                    )}
                 </button>
             </div>
         </div>

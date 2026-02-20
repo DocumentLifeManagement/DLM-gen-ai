@@ -39,6 +39,14 @@ export default function Router() {
         }
       />
       <Route
+        path="/admin/document/:id"
+        element={
+          <ProtectedRoute role={userRole} allowedRoles={["admin"]}>
+            <ReviewDoc />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/approver"
         element={
           <ProtectedRoute role={userRole} allowedRoles={["approver"]}>

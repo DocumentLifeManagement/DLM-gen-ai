@@ -6,8 +6,11 @@ const routes = {
   "/uploader": "UploaderDashboard",
   "/reviewer": "ReviewerDashboard",
   "/reviewer/document/:id": "ReviewDoc",
+  "/admin/document/:id": "AdminDocumentDetail",
+  "/approver/document/:id": "ReviewDoc",
   "/approver": "ApproverDashboard",
   "/admin": "AdminDashboard",
+  "/admin/users": "UserManagement",
 };
 
 export function useRouter() {
