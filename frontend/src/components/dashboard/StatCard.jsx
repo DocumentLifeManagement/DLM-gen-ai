@@ -1,15 +1,20 @@
 import React from "react";
 import Card from "../landing/Card";
+import clsx from "clsx";
 
-export default function StatCard({ title, value, icon: Icon, color = "text-brand-accent" }) {
+export default function StatCard({ title, value, icon: Icon, color = "text-brand-accent", compact = false }) {
     return (
-        <Card className="!p-6 flex items-center gap-4">
-            <div className={`p-3 rounded-lg bg-brand-950 border border-brand-800 ${color}`}>
-                {Icon && <Icon size={24} />}
+        <Card className={clsx("flex items-center gap-4", compact ? "!p-4" : "!p-6")}>
+            <div className={clsx(
+                "rounded-lg bg-brand-950 border border-brand-800",
+                compact ? "p-2" : "p-3",
+                color
+            )}>
+                {Icon && <Icon size={compact ? 18 : 24} />}
             </div>
             <div>
-                <p className="text-sm text-slate-500">{title}</p>
-                <h3 className="text-2xl font-bold text-white">{value}</h3>
+                <p className={clsx("text-slate-500", compact ? "text-[10px] uppercase tracking-wider font-bold" : "text-sm")}>{title}</p>
+                <h3 className={clsx("font-bold text-white", compact ? "text-lg" : "text-2xl")}>{value}</h3>
             </div>
         </Card>
     );

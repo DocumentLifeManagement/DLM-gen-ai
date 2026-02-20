@@ -12,6 +12,8 @@ import ReviewerDashboard from "./pages/reviewer/Dashboard";
 import ReviewDoc from "./pages/reviewer/ReviewDocument";
 import ApproverDashboard from "./pages/approver/Dashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
+import AdminDocumentDetail from "./pages/admin/DocumentDetail";
+import UserManagement from "./pages/admin/UserManagement";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -22,13 +24,43 @@ export default function App() {
   const userRole = localStorage.getItem("role") || "uploader";
 
   /* ------------------------------
-     Dynamic Reviewer Document Route
+     Admin User Management
      ------------------------------ */
-  if (currentPath.startsWith("/reviewer/document/")) {
+  if (currentPath === "/admin/users") {
     return (
       <ProtectedRoute
         role={userRole}
-        allowedRoles={["reviewer"]}
+        allowedRoles={["admin"]}
+        navigate={navigate}
+      >
+        <UserManagement navigate={navigate} />
+      </ProtectedRoute>
+    );
+  }
+
+  /* ------------------------------
+     Admin Document Detail Route
+     ------------------------------ */
+  if (currentPath.startsWith("/admin/document/")) {
+    return (
+      <ProtectedRoute
+        role={userRole}
+        allowedRoles={["admin"]}
+        navigate={navigate}
+      >
+        <AdminDocumentDetail navigate={navigate} id={params.id} />
+      </ProtectedRoute>
+    );
+  }
+
+  /* ------------------------------
+     Reviewer/Approver Document Detail Route
+     ------------------------------ */
+  if (currentPath.startsWith("/reviewer/document/") || currentPath.startsWith("/approver/document/")) {
+    return (
+      <ProtectedRoute
+        role={userRole}
+        allowedRoles={["reviewer", "approver"]}
         navigate={navigate}
       >
         <ReviewDoc navigate={navigate} id={params.id} />

@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 
 export default function ReviewDocument({ navigate, id }) {
-  const userRole = "reviewer";
+  const userRole = localStorage.getItem("role") || "reviewer";
 
   const [documentData, setDocumentData] = useState(null);
   const [fields, setFields] = useState([]);
@@ -118,8 +118,8 @@ export default function ReviewDocument({ navigate, id }) {
         throw new Error(detail.detail || "Approval process failed at server");
       }
 
-      showToast("Document verified and pushed to final approval stage");
-      setTimeout(() => navigate("/reviewer"), 1000);
+      showToast("Document verified and pushed to next stage");
+      setTimeout(() => navigate(`/${userRole}`), 1000);
     } catch (err) {
       showToast(err.message, "error");
     } finally {
@@ -137,7 +137,7 @@ export default function ReviewDocument({ navigate, id }) {
 
       if (!res.ok) throw new Error("Rejection process failed");
       showToast("Document marked as Rejected");
-      setTimeout(() => navigate("/reviewer"), 1000);
+      setTimeout(() => navigate(`/${userRole}`), 1000);
     } catch (err) {
       showToast(err.message, "error");
     }
@@ -158,7 +158,7 @@ export default function ReviewDocument({ navigate, id }) {
         <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
         <h3 className="text-xl font-bold text-white mb-2">Record Access Denied</h3>
         <p className="text-slate-400 mb-6">{error}</p>
-        <Button variant="outline" onClick={() => navigate("/reviewer")}>Return to Fleet Portal</Button>
+        <Button variant="outline" onClick={() => navigate(`/${userRole}`)}>Return to Portal</Button>
       </div>
     </DashboardLayout>
   );
@@ -167,7 +167,7 @@ export default function ReviewDocument({ navigate, id }) {
     <DashboardLayout role={userRole} navigate={navigate} title="In-Depth Document Audit">
 
       <div className="flex items-center gap-2 mb-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
-        <span className="hover:text-white cursor-pointer transition-colors" onClick={() => navigate("/reviewer")}>Fleet Controls</span>
+        <span className="hover:text-white cursor-pointer transition-colors" onClick={() => navigate(`/${userRole}`)}>Fleet Controls</span>
         <span className="opacity-20">/</span>
         <span className="text-brand-accent">Verification Protocol</span>
         {isDirty && (
@@ -223,7 +223,7 @@ export default function ReviewDocument({ navigate, id }) {
           <div className="px-8 py-6 bg-brand-950 border-b border-brand-800 flex justify-between items-center z-10 shrink-0">
             <div className="flex items-center gap-5">
               <button
-                onClick={() => navigate("/reviewer")}
+                onClick={() => navigate(`/${userRole}`)}
                 className="p-2.5 bg-brand-900/50 hover:bg-brand-800 rounded-xl text-slate-500 hover:text-white transition-all border border-brand-800"
               >
                 <ChevronLeft size={20} />
