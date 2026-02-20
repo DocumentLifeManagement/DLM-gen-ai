@@ -15,8 +15,8 @@ export default function DashboardLayout({ children, role, navigate, title }) {
 
     const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
-    // Mock current path for sidebar active state
-    const currentPath = `/${role}`;
+    // Use actual path for sidebar active state
+    const currentPath = window.location.pathname;
 
     return (
         <div className="min-h-screen bg-brand-950 text-slate-300 font-sans flex">

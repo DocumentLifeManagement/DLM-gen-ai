@@ -12,7 +12,9 @@ import {
     Search,
     Filter,
     AlertCircle,
-    Key
+    Key,
+    Eye,
+    EyeOff
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -20,7 +22,7 @@ export default function UserManagement({ navigate }) {
     const userRole = "admin";
 
     const [users, setUsers] = useState([]);
-    const [roles, setRoles] = useState([]);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showAddForm, setShowAddForm] = useState(false);
@@ -33,11 +35,11 @@ export default function UserManagement({ navigate }) {
         role: ""
     });
 
+    const [showPassword, setShowPassword] = useState(false);
     const [formLoading, setFormLoading] = useState(false);
 
     useEffect(() => {
         fetchUsers();
-        fetchRoles();
     }, []);
 
     const fetchUsers = async () => {
@@ -56,18 +58,7 @@ export default function UserManagement({ navigate }) {
         }
     };
 
-    const fetchRoles = async () => {
-        try {
-            const token = localStorage.getItem("access_token");
-            const res = await fetch("http://localhost:8000/api/v1/users/roles", {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setRoles(data);
-            }
-        } catch (err) { }
-    };
+
 
     const validateEmail = (email) => {
         return email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
@@ -219,16 +210,25 @@ export default function UserManagement({ navigate }) {
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                     <Key size={12} /> Security Credential
                                 </label>
-                                <input
-                                    type="password"
-                                    required
-                                    placeholder="••••••••"
-                                    value={formData.password}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, password: e.target.value })
-                                    }
-                                    className="w-full bg-brand-950 border border-brand-800 rounded-xl px-5 py-3.5 text-white text-sm outline-none focus:border-brand-accent transition-all"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        required
+                                        placeholder="••••••••"
+                                        value={formData.password}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, password: e.target.value })
+                                        }
+                                        className="w-full bg-brand-950 border border-brand-800 rounded-xl px-5 py-3.5 text-white text-sm outline-none focus:border-brand-accent transition-all pr-12"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Role */}
@@ -239,36 +239,15 @@ export default function UserManagement({ navigate }) {
 
                                 <div className="flex gap-4">
                                     <select
+                                        className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-brand-accent transition-colors appearance-none"
                                         value={formData.role}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, role: e.target.value })
-                                        }
-                                        required
-                                        className={clsx(
-                                            "flex-1 bg-brand-950 border border-brand-800 rounded-xl px-5 py-3.5 text-sm outline-none focus:border-brand-accent transition-all appearance-none",
-                                            !formData.role
-                                                ? "text-slate-500"
-                                                : "text-white"
-                                        )}
+                                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                                     >
-                                        <option value="" disabled>
-                                            choose role..
-                                        </option>
-
-                                        {roles.length > 0 ? (
-                                            roles.map((r) => (
-                                                <option key={r} value={r}>
-                                                    {r.toUpperCase()}
-                                                </option>
-                                            ))
-                                        ) : (
-                                            <>
-                                                <option value="reviewer">REVIEWER</option>
-                                                <option value="approver">APPROVER</option>
-                                                <option value="admin">ADMIN</option>
-                                                <option value="uploader">UPLOADER</option>
-                                            </>
-                                        )}
+                                        <option value="">Choose a role...</option>
+                                        <option value="ADMIN">Administrator</option>
+                                        <option value="UPLOADER">Uploader</option>
+                                        <option value="REVIEWER">Reviewer</option>
+                                        <option value="APPROVER">Approver</option>
                                     </select>
 
                                     <Button

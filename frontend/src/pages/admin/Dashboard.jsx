@@ -226,12 +226,13 @@ export default function AdminDashboard({ navigate }) {
         <BarChart3 size={18} className="text-brand-accent" />
         {activeTab === 'active' ? 'System Overview' : activeTab === 'bin' ? 'Bin Overview' : 'Archive Overview'}
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <StatCard
           title="Total Documents"
           value={total}
           icon={FileText}
           color="text-brand-accent"
+          compact={true}
         />
         {activeTab === 'active' && (
           <>
@@ -240,18 +241,21 @@ export default function AdminDashboard({ navigate }) {
               value={`${completionRate}%`}
               icon={CheckCircle}
               color="text-green-400"
+              compact={true}
             />
             <StatCard
               title="System Load"
               value={`${activeDocs.length} Active`}
               icon={Activity}
               color="text-brand-cyan"
+              compact={true}
             />
             <StatCard
               title="SLA Breaches"
               value={slaBreaches}
               icon={AlertTriangle}
               color={slaBreaches > 0 ? "text-red-500" : "text-slate-400"}
+              compact={true}
             />
           </>
         )}

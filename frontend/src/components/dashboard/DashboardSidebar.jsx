@@ -5,10 +5,6 @@ import clsx from "clsx";
 export default function DashboardSidebar({ role, navigate, activePath, isCollapsed, onToggle }) {
     const links = [
         { label: "Dashboard", href: `/${role}`, icon: LayoutDashboard },
-        { label: "Uploads", href: "/uploader", icon: UploadCloud, role: "uploader" },
-        { label: "Reviews", href: "/reviewer", icon: FileText, role: "reviewer" },
-        { label: "Approvals", href: "/approver", icon: CheckCircle, role: "approver" },
-        { label: "Admin", href: "/admin", icon: Settings, role: "admin" },
         { label: "Users", href: "/admin/users", icon: Users, role: "admin" },
     ];
 
@@ -54,7 +50,7 @@ export default function DashboardSidebar({ role, navigate, activePath, isCollaps
                         onClick={() => navigate(link.href)}
                         className={clsx(
                             "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-sm font-medium relative group",
-                            activePath === link.href || activePath.startsWith(link.href + "/")
+                            (link.href === "/admin" ? activePath === "/admin" : (activePath === link.href || activePath.startsWith(link.href + "/")))
                                 ? "bg-brand-900 text-white border border-brand-800"
                                 : "text-slate-400 hover:text-white hover:bg-brand-900/50"
                         )}
