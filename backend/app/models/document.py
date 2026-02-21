@@ -17,6 +17,7 @@ class Document(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True, default=None)   # soft-delete: non-null = in bin
     archived_at = Column(DateTime, nullable=True, default=None)  # archive: non-null = archived
+    tag = Column(String, nullable=True)                          # document classification tag
     
     # New Review/Approval fields
     reviewer_notes = Column(Text, nullable=True)

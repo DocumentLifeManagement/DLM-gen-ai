@@ -1,5 +1,25 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+
+// Forced IST Formatter
+const formatIST = (dateStr) => {
+    if (!dateStr) return "—";
+    try {
+        const date = new Date(dateStr);
+        return new Intl.DateTimeFormat('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        }).format(date) + " IST";
+    } catch (e) {
+        return dateStr;
+    }
+};
+
 import Button from "../../components/landing/Button";
 import {
     FileText,
@@ -383,10 +403,10 @@ export default function AdminDocumentDetail({ navigate, id }) {
                                                                         entry.to === "APPROVED" || entry.to === "ARCHIVED" ? "text-emerald-400" :
                                                                             "text-slate-400"
                                                                 )}>
-                                                                    {entry.from} → {entry.to}
+                                                                    {entry.from === "NONE" ? "Initial Document Inflow" : `${entry.from} → ${entry.to}`}
                                                                 </span>
                                                                 <span className="text-[8px] text-slate-600 font-mono">
-                                                                    {new Date(entry.timestamp).toLocaleString()}
+                                                                    {formatIST(entry.timestamp)}
                                                                 </span>
                                                             </div>
                                                             <div className="mt-2 flex flex-col gap-0.5">
@@ -407,8 +427,7 @@ export default function AdminDocumentDetail({ navigate, id }) {
                                                     </div>
                                                 ))}
 
-                                                {/* Fallback/Supplement: always show doc-level notes if they exist */}
-                                                {(!lifecycle.length) && (
+                                                {!lifecycle.length && (
                                                     <div className="relative">
                                                         <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-brand-800 border-4 border-brand-950" />
                                                         <div className="p-4 bg-brand-950/50 border border-brand-800 rounded-xl">
@@ -416,29 +435,6 @@ export default function AdminDocumentDetail({ navigate, id }) {
                                                             <p className="text-[10px] text-slate-400">Record successfully vaulted into secure storage.</p>
                                                         </div>
                                                     </div>
-                                                )}
-                                                {documentData?.reviewer_notes && (
-                                                    <div className="relative">
-                                                        <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-amber-500 border-4 border-brand-950" />
-                                                        <div className="p-4 bg-brand-950 rounded-xl border border-amber-500/20">
-                                                            <span className="text-[9px] font-black text-amber-500 uppercase block mb-1">Reviewer Assessment</span>
-                                                            <p className="text-[11px] text-slate-200 italic leading-relaxed">"{documentData.reviewer_notes}"</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {documentData?.approver_notes && (
-                                                    <div className="relative">
-                                                        <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-brand-cyan border-4 border-brand-950" />
-                                                        <div className="p-4 bg-brand-950 rounded-xl border border-brand-cyan/20">
-                                                            <span className="text-[9px] font-black text-brand-cyan uppercase block mb-1">
-                                                                {documentData.status === "ARCHIVED" ? "Administrative Master Decision" : "Approver Final Logic"}
-                                                            </span>
-                                                            <p className="text-[11px] text-slate-200 italic leading-relaxed">"{documentData.approver_notes}"</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {!lifecycle.length && !documentData?.reviewer_notes && !documentData?.approver_notes && (
-                                                    <div className="text-center py-6 text-slate-600 text-[11px]">No decision notes recorded yet.</div>
                                                 )}
                                             </div>
                                         </div>

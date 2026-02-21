@@ -1,5 +1,30 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import clsx from "clsx";
+import { motion, AnimatePresence } from "framer-motion";
+
+
+// Forced IST Formatter
+const formatIST = (date, type = "both") => {
+  if (!date) return "—";
+  try {
+    const d = new Date(date);
+    const options = {
+      timeZone: 'Asia/Kolkata',
+      hour12: true
+    };
+
+    if (type === "date") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+    } else if (type === "time") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, hour: '2-digit', minute: '2-digit' }).format(d);
+    }
+    return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d) + " IST";
+  } catch (e) {
+    return String(date);
+  }
+};
+
 import StatCard from "../../components/dashboard/StatCard";
 import Button from "../../components/landing/Button";
 import {
@@ -26,6 +51,7 @@ export default function ReviewerDashboard({ navigate }) {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [activeTab, setActiveTab] = useState("active");
   const [sortOrder, setSortOrder] = useState("desc");
 
   const [page, setPage] = useState(1);
@@ -39,12 +65,16 @@ export default function ReviewerDashboard({ navigate }) {
 
   useEffect(() => {
     applyFilters();
-  }, [documents, search, statusFilter, sortOrder]);
+  }, [documents, search, statusFilter, sortOrder, activeTab]);
 
   const fetchDocuments = async () => {
     try {
+      const token = localStorage.getItem("access_token");
       const res = await fetch(
-        "http://localhost:8000/api/v1/documents"
+        "http://localhost:8000/api/v1/documents",
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
       );
 
       if (!res.ok) throw new Error("Failed to fetch documents");
@@ -61,13 +91,18 @@ export default function ReviewerDashboard({ navigate }) {
   const applyFilters = () => {
     let temp = [...documents];
 
-    if (statusFilter !== "ALL") {
-      temp = temp.filter((doc) => doc.status === statusFilter);
+    if (activeTab === "rejected") {
+      temp = temp.filter((doc) => doc.status === "REJECTED" || doc.status === "FAILED");
+    } else {
+      temp = temp.filter((doc) => doc.status !== "REJECTED" && doc.status !== "FAILED");
+      if (statusFilter !== "ALL") {
+        temp = temp.filter((doc) => doc.status === statusFilter);
+      }
     }
 
     if (search) {
       temp = temp.filter((doc) =>
-        doc.filename.toLowerCase().includes(search.toLowerCase()) ||
+        doc.filename?.toLowerCase().includes(search.toLowerCase()) ||
         doc.id?.toString().includes(search)
       );
     }
@@ -149,6 +184,30 @@ export default function ReviewerDashboard({ navigate }) {
         <StatCard title="Reviewed Today" value={reviewed} icon={CheckCircle} color="text-green-400" />
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-6 border-b border-brand-800 mb-6 font-mono">
+        <button
+          onClick={() => { setActiveTab("active"); setPage(1); }}
+          className={clsx(
+            "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative px-2",
+            activeTab === "active" ? "text-brand-accent" : "text-slate-600 hover:text-slate-400"
+          )}
+        >
+          Active Workload
+          {activeTab === "active" && <motion.div layoutId="reviewerActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent" />}
+        </button>
+        <button
+          onClick={() => { setActiveTab("rejected"); setPage(1); }}
+          className={clsx(
+            "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative px-2 flex items-center gap-2",
+            activeTab === "rejected" ? "text-rose-500" : "text-slate-600 hover:text-slate-400"
+          )}
+        >
+          Rejected / Bin
+          {activeTab === "rejected" && <motion.div layoutId="reviewerActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500" />}
+        </button>
+      </div>
+
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-center">
         <div className="relative flex-1 w-full md:max-w-md">
@@ -163,19 +222,21 @@ export default function ReviewerDashboard({ navigate }) {
         </div>
 
         <div className="flex gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:flex-none">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full md:w-40 bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
-            >
-              <option value="ALL">All Status</option>
-              <option value="REVIEW_PENDING">Review Pending</option>
-              <option value="REVIEWED">Reviewed</option>
-              <option value="PROCESSING">Processing</option>
-            </select>
-          </div>
+          {activeTab === "active" && (
+            <div className="relative flex-1 md:flex-none">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full md:w-40 bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
+              >
+                <option value="ALL">All Status</option>
+                <option value="REVIEW_PENDING">Review Pending</option>
+                <option value="REVIEWED">Reviewed</option>
+                <option value="PROCESSING">Processing</option>
+              </select>
+            </div>
+          )}
 
           <div className="relative flex-1 md:flex-none">
             <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
@@ -228,14 +289,21 @@ export default function ReviewerDashboard({ navigate }) {
                     </div>
                     <div className="truncate">
                       <p className="truncate text-sm md:text-base text-white">{doc.filename}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5 font-mono">ID: {doc.id}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[10px] text-slate-500 font-mono">ID: {doc.id}</p>
+                        {doc.tag && (
+                          <span className="text-[8px] px-1.5 py-0.5 bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/20 rounded font-mono uppercase tracking-[0.1em]">
+                            {doc.tag}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="hidden md:block md:col-span-2 text-slate-400 text-xs">
-                    {new Date(doc.created_at).toLocaleDateString()}
+                    {formatIST(doc.created_at, "date")}
                   </div>
                   <div className="hidden md:block md:col-span-1 text-[10px] font-mono text-slate-500 text-center">
-                    {new Date(doc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatIST(doc.created_at, "time")}
                   </div>
 
                   {/* Risk Analysis Pillar */}

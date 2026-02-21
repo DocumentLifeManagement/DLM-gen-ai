@@ -1,5 +1,27 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+
+// Forced IST Formatter
+const formatIST = (date, type = "both") => {
+  if (!date) return "—";
+  try {
+    const d = new Date(date);
+    const options = {
+      timeZone: 'Asia/Kolkata',
+      hour12: true
+    };
+
+    if (type === "date") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+    } else if (type === "time") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, hour: '2-digit', minute: '2-digit' }).format(d);
+    }
+    return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d) + " IST";
+  } catch (e) {
+    return String(date);
+  }
+};
+
 import StatCard from "../../components/dashboard/StatCard";
 import Button from "../../components/landing/Button";
 import {
@@ -73,7 +95,7 @@ export default function ApproverDashboard({ navigate }) {
 
     if (search) {
       temp = temp.filter((doc) =>
-        doc.filename.toLowerCase().includes(search.toLowerCase()) ||
+        doc.filename?.toLowerCase().includes(search.toLowerCase()) ||
         doc.id?.toString().includes(search)
       );
     }
@@ -266,14 +288,21 @@ export default function ApproverDashboard({ navigate }) {
                     </div>
                     <div className="truncate">
                       <p className="truncate text-sm md:text-base text-white">{doc.filename}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5 font-mono">ID: {doc.id}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-[10px] text-slate-500 font-mono">ID: {doc.id}</p>
+                        {doc.tag && (
+                          <span className="text-[8px] px-1.5 py-0.5 bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/20 rounded font-mono uppercase tracking-[0.1em]">
+                            {doc.tag}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="hidden md:block md:col-span-2 text-slate-400 text-xs">
-                    {new Date(doc.created_at).toLocaleDateString()}
+                    {formatIST(doc.created_at, "date")}
                   </div>
                   <div className="hidden md:block md:col-span-1 text-[10px] font-mono text-slate-500 text-center">
-                    {new Date(doc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatIST(doc.created_at, "time")}
                   </div>
 
                   {/* Risk Analysis Pillar */}

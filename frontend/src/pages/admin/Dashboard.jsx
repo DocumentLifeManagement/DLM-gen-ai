@@ -1,5 +1,29 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import clsx from "clsx";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Forced IST Formatter
+const formatIST = (date, type = "both") => {
+  if (!date) return "—";
+  try {
+    const d = new Date(date);
+    const options = {
+      timeZone: 'Asia/Kolkata',
+      hour12: true
+    };
+
+    if (type === "date") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+    } else if (type === "time") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, hour: '2-digit', minute: '2-digit' }).format(d);
+    }
+    return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d) + " IST";
+  } catch (e) {
+    return String(date);
+  }
+};
+
 import StatCard from "../../components/dashboard/StatCard";
 import Button from "../../components/landing/Button";
 import {
@@ -35,9 +59,12 @@ export default function AdminDashboard({ navigate, query }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortOrder, setSortOrder] = useState("desc");
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState(null); // { msg, type }
+  const [confirmModal, setConfirmModal] = useState({ show: false, title: "", message: "", onConfirm: null });
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState(query?.tab || "active"); // Initialize from query params
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   const limit = 10;
   const SLA_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -178,7 +205,7 @@ export default function AdminDashboard({ navigate, query }) {
         handleTabChange("active");
       }
     } catch (err) {
-      showToast("Failed to restore document");
+      showToast("Failed to restore document", "error");
     }
   };
 
@@ -201,10 +228,57 @@ export default function AdminDashboard({ navigate, query }) {
     }
   };
 
-  const showToast = (message) => {
-    setToast(message);
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkAction = async () => {
+    const isPurge = activeTab === "bin";
+    const endpoint = isPurge ? "bulk-purge" : "bulk-delete";
+    const confirmMsg = isPurge
+      ? `Permanently purge ${selectedIds.length} documents? This action is IRREVERSIBLE.`
+      : `Move ${selectedIds.length} documents to bin?`;
+
+    setConfirmModal({
+      show: true,
+      title: isPurge ? "Permanent Purge" : "Move to Bin",
+      message: confirmMsg,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, show: false }));
+        await executeBulkAction(endpoint);
+      }
+    });
+  };
+
+  const executeBulkAction = async (endpoint) => {
+
+    const token = localStorage.getItem("access_token");
+    try {
+      const res = await fetch(`http://localhost:8000/api/v1/documents/${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ ids: selectedIds })
+      });
+      if (!res.ok) throw new Error("Bulk action failed");
+      setDocuments(documents.filter(doc => !selectedIds.includes(doc.id)));
+      setSelectedIds([]);
+      setIsSelectionMode(false); // Reset selection mode
+      showToast(`Action successful for ${selectedIds.length} documents`);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  };
+
 
   const paginatedDocs = filteredDocs.slice(
     (page - 1) * limit,
@@ -316,7 +390,30 @@ export default function AdminDashboard({ navigate, query }) {
           />
         </div>
 
-        <div className="flex gap-4 w-full md:w-auto">
+        <div className="flex gap-4 w-full md:w-auto items-center">
+          <button
+            onClick={() => {
+              setIsSelectionMode(!isSelectionMode);
+              if (isSelectionMode) setSelectedIds([]);
+            }}
+            className={clsx(
+              "flex items-center gap-2 px-6 py-2.5 border rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg",
+              isSelectionMode
+                ? "bg-brand-accent text-white border-brand-accent"
+                : "bg-brand-900 border-brand-800 text-slate-400 hover:text-white"
+            )}
+          >
+            {isSelectionMode ? "Cancel Select" : "Delete Files"}
+          </button>
+
+          {isSelectionMode && selectedIds.length > 0 && (
+            <button
+              onClick={handleBulkAction}
+              className="flex items-center gap-2 px-6 py-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-[0_0_20px_rgba(244,63,94,0.1)] animate-in fade-in slide-in-from-left-4"
+            >
+              <Trash2 size={16} /> {activeTab === "bin" ? "Purge" : "Trash"} ({selectedIds.length})
+            </button>
+          )}
           <div className="relative flex-1 md:flex-none">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
             <select
@@ -380,10 +477,27 @@ export default function AdminDashboard({ navigate, query }) {
                 return (
                   <div
                     key={doc.id}
-                    className={`grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-brand-800/30 transition-colors group cursor-pointer ${breached && activeTab === 'active' ? 'bg-red-500/5' : ''}`}
-                    onClick={() => navigate(`/admin/document/${doc.id}`)}
+                    className={clsx(
+                      "grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-brand-800/30 transition-colors group cursor-pointer relative",
+                      breached && activeTab === 'active' ? 'bg-red-500/5' : '',
+                      isSelectionMode && selectedIds.includes(doc.id) ? "border-l-4 border-l-brand-accent bg-brand-accent/5" : ""
+                    )}
+                    onClick={() => isSelectionMode ? toggleSelect(doc.id) : navigate(`/admin/document/${doc.id}`)}
                   >
                     <div className="col-span-12 md:col-span-4 font-medium text-white flex items-center gap-4">
+                      {isSelectionMode && (
+                        <div
+                          className="p-1 animate-in zoom-in-50 duration-200"
+                          onClick={(e) => { e.stopPropagation(); toggleSelect(doc.id); }}
+                        >
+                          <div className={clsx(
+                            "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                            selectedIds.includes(doc.id) ? "bg-brand-accent border-brand-accent" : "border-brand-800 bg-brand-950 group-hover:border-brand-700"
+                          )}>
+                            {selectedIds.includes(doc.id) && <CheckCircle size={12} className="text-white" />}
+                          </div>
+                        </div>
+                      )}
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${breached && activeTab === 'active' ? 'bg-red-500/20 text-red-500' : 'bg-brand-800 text-slate-400'}`}>
                         {breached && activeTab === 'active' ? <AlertTriangle size={20} /> : <FileText size={20} />}
                       </div>
@@ -400,10 +514,10 @@ export default function AdminDashboard({ navigate, query }) {
                       </div>
                     </div>
                     <div className="hidden md:block md:col-span-1 text-slate-400 text-xs">
-                      {new Date(doc.created_at).toLocaleDateString()}
+                      {formatIST(doc.created_at, "date")}
                     </div>
                     <div className="hidden md:block md:col-span-1 text-slate-500 text-[10px] font-mono text-center">
-                      {new Date(doc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {formatIST(doc.created_at, "time")}
                     </div>
 
                     {/* New Risk Analysis Pillar */}
@@ -448,13 +562,6 @@ export default function AdminDashboard({ navigate, query }) {
                               <Archive size={18} />
                             </button>
                           )}
-                          <button
-                            onClick={(e) => handleDelete(doc.id, e)}
-                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
-                            title="Move to Bin"
-                          >
-                            <Trash2 size={18} />
-                          </button>
                         </>
                       )}
 
@@ -475,13 +582,6 @@ export default function AdminDashboard({ navigate, query }) {
                           >
                             <Eye size={18} />
                           </button>
-                          <button
-                            onClick={(e) => handlePurge(doc.id, e)}
-                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
-                            title="Permanently Delete"
-                          >
-                            <XCircle size={18} />
-                          </button>
                         </>
                       )}
 
@@ -501,13 +601,6 @@ export default function AdminDashboard({ navigate, query }) {
                             onClick={() => navigate(`/admin/document/${doc.id}`)}
                           >
                             <Eye size={18} />
-                          </button>
-                          <button
-                            onClick={(e) => handleDelete(doc.id, e)}
-                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
-                            title="Move to Bin"
-                          >
-                            <Trash2 size={18} />
                           </button>
                         </>
                       )}
@@ -543,13 +636,71 @@ export default function AdminDashboard({ navigate, query }) {
         </button>
       </div>
 
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmModal.show && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-6"
+            onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-brand-900 border border-brand-800 rounded-3xl w-full max-w-md p-8 shadow-2xl relative overflow-hidden text-center"
+            >
+              <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-500 shadow-inner">
+                <ShieldAlert size={32} />
+              </div>
+              <h3 className="text-xl font-black text-white mb-2">{confirmModal.title}</h3>
+              <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+                {confirmModal.message}
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+                  className="flex-1 py-3.5 px-6 rounded-xl bg-brand-800 text-slate-400 font-black uppercase tracking-widest text-[10px] hover:text-white transition-all border border-brand-700 hover:border-brand-600"
+                >
+                  Abort Operation
+                </button>
+                <button
+                  onClick={confirmModal.onConfirm}
+                  className="flex-1 py-3.5 px-6 rounded-xl bg-rose-500 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-rose-950/40 hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  Yes, Execute
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 bg-brand-900 border border-brand-700 text-white px-4 py-3 rounded-lg shadow-2xl animate-in slide-in-from-bottom-5 z-50 flex items-center gap-3">
-          <div className={`w-2 h-2 rounded-full ${toast.includes("Failed") ? "bg-red-500" : "bg-green-500"}`} />
-          {toast}
-        </div>
-      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, x: 100, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 100, scale: 0.9 }}
+            className={clsx(
+              "fixed bottom-8 right-8 px-8 py-5 rounded-2xl shadow-2xl z-[300] border-2 flex items-center gap-4",
+              toast.type === 'error' ? 'bg-red-950 border-red-900 text-red-200' : 'bg-brand-900 border-brand-800 text-white'
+            )}
+          >
+            <div className={clsx("w-2.5 h-2.5 rounded-full", toast.type === 'error' ? "bg-red-500 animate-pulse" : "bg-brand-accent shadow-[0_0_10px_rgba(var(--brand-accent-rgb),1)]")} />
+            <div className="flex flex-col">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 mb-0.5">
+                {toast.type === 'error' ? 'System Warning' : 'Operation Success'}
+              </p>
+              <p className="text-sm font-bold tracking-tight">{toast.msg}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </DashboardLayout>
   );

@@ -1,5 +1,25 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+
+// Forced IST Formatter
+const formatIST = (dateStr) => {
+  if (!dateStr) return "—";
+  try {
+    const date = new Date(dateStr);
+    return new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).format(date) + " IST";
+  } catch (e) {
+    return dateStr;
+  }
+};
+
 import Button from "../../components/landing/Button";
 import {
   FileText,
@@ -38,6 +58,7 @@ export default function ReviewDocument({ navigate, id }) {
   const [digitallySigned, setDigitallySigned] = useState(false);
   const [activeTab, setActiveTab] = useState("metadata"); // metadata | audit
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [lifecycle, setLifecycle] = useState([]);
 
   useEffect(() => {
     fetchDocument();
@@ -61,6 +82,20 @@ export default function ReviewDocument({ navigate, id }) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+
+    // Fetch lifecycle history
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`http://localhost:8000/api/v1/documents/${id}/lifecycle`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const history = await res.json();
+        setLifecycle(history);
+      }
+    } catch (err) {
+      console.error("Failed to fetch lifecycle", err);
     }
   };
 
@@ -346,19 +381,37 @@ export default function ReviewDocument({ navigate, id }) {
                         <History size={12} /> Decision History
                       </h4>
                       <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-brand-800">
-                        <div className="relative">
-                          <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-brand-800 border-4 border-brand-950" />
-                          <div className="p-4 bg-brand-950/50 border border-brand-800 rounded-xl">
-                            <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Initial Ingestion</span>
-                            <p className="text-[10px] text-slate-400">System captured and archived record.</p>
-                          </div>
-                        </div>
-                        {documentData?.reviewer_notes && (
+                        {lifecycle.length > 0 ? (
+                          lifecycle.map((entry, idx) => (
+                            <div key={idx} className="relative">
+                              <div className={clsx(
+                                "absolute -left-6 top-1.5 w-4 h-4 rounded-full border-4 border-brand-950",
+                                entry.to === "REJECTED" ? "bg-red-500" :
+                                  entry.to === "APPROVED" || entry.to === "ARCHIVED" ? "bg-emerald-500" :
+                                    entry.to === "APPROVAL_PENDING" ? "bg-amber-500" : "bg-brand-800"
+                              )} />
+                              <div className="p-4 bg-brand-950/50 border border-brand-800 rounded-xl">
+                                <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">
+                                  {entry.from === "NONE" ? "Initial Document Inflow" : `${entry.from} → ${entry.to}`}
+                                </span>
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-[10px] text-white font-bold">{entry.actor_name || entry.actor_id} <span className="text-slate-600 font-mono text-[8px] ml-1 uppercase">{entry.actor_type}</span></span>
+                                  <span className="text-[8px] text-slate-500 font-mono">{formatIST(entry.timestamp)}</span>
+                                </div>
+                                {entry.notes && (
+                                  <p className="text-[11px] text-slate-300 italic bg-brand-900/40 p-3 rounded-lg border border-brand-800/50 leading-relaxed">
+                                    "{entry.notes}"
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
                           <div className="relative">
-                            <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-orange-500 border-4 border-brand-950" />
-                            <div className="p-4 bg-brand-950 rounded-xl border border-orange-500/20">
-                              <span className="text-[9px] font-black text-orange-500 uppercase block mb-1">Human Review Phase</span>
-                              <p className="text-[11px] text-slate-200 italic leading-relaxed">"{documentData.reviewer_notes}"</p>
+                            <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-brand-800 border-4 border-brand-950" />
+                            <div className="p-4 bg-brand-950/50 border border-brand-800 rounded-xl">
+                              <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Initial Ingestion</span>
+                              <p className="text-[10px] text-slate-400">System captured and archived record.</p>
                             </div>
                           </div>
                         )}
