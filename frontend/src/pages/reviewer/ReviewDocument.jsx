@@ -12,6 +12,12 @@ import {
   History,
   ExternalLink,
   Info,
+  Maximize2,
+  Send,
+  Trash2,
+  Clock,
+  Activity,
+  UserCheck,
   Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +33,11 @@ export default function ReviewDocument({ navigate, id }) {
   const [toast, setToast] = useState(null);
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [uploaderMessage, setUploaderMessage] = useState("");
+  const [digitallySigned, setDigitallySigned] = useState(false);
+  const [activeTab, setActiveTab] = useState("metadata"); // metadata | audit
+  const [showRejectModal, setShowRejectModal] = useState(false);
 
   useEffect(() => {
     fetchDocument();
@@ -44,6 +55,7 @@ export default function ReviewDocument({ navigate, id }) {
       const data = await res.json();
       setDocumentData(data);
       setFields(data.fields || []);
+      setNotes(userRole === "approver" ? (data.approver_notes || "") : (data.reviewer_notes || ""));
       setIsDirty(false);
     } catch (err) {
       setError(err.message);
@@ -74,18 +86,13 @@ export default function ReviewDocument({ navigate, id }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          fields
-        }),
+        body: JSON.stringify({ fields }),
       });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || "Failed to update records");
-      }
+      if (!res.ok) throw new Error("Failed to update records");
 
       setIsDirty(false);
-      if (!silent) showToast("All changes saved successfully");
+      if (!silent) showToast("Changes recorded");
       return true;
     } catch (err) {
       showToast(err.message, "error");
@@ -95,7 +102,12 @@ export default function ReviewDocument({ navigate, id }) {
     }
   };
 
-  const handleApprove = async () => {
+  const handleDecision = async (decisionType) => {
+    if (decisionType === 'APPROVE' && userRole === "approver" && !digitallySigned) {
+      showToast("Digital signature required for final approval", "error");
+      return;
+    }
+
     if (isDirty) {
       const saved = await handleSaveChanges(true);
       if (!saved) return;
@@ -105,235 +117,408 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const docId = parseInt(id);
-      const res = await fetch(`http://localhost:8000/api/v1/documents/${docId}/review`, {
+
+      let endpoint = "review";
+      let payload = { notes, uploader_message: uploaderMessage };
+
+      if (decisionType === 'APPROVE') {
+        endpoint = userRole === "approver" ? "approve" : "review";
+        payload.digitally_signed = digitallySigned;
+      } else if (decisionType === 'REJECT') {
+        endpoint = "reject";
+        payload.to_state = "REJECTED";
+      } else if (decisionType === 'RETURN') {
+        endpoint = "reject";
+        payload.to_state = "REVIEW_PENDING";
+      }
+
+      const res = await fetch(`http://localhost:8000/api/v1/documents/${docId}/${endpoint}`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
-        }
+        },
+        body: JSON.stringify(payload)
       });
 
-      if (!res.ok) {
-        const detail = await res.json();
-        throw new Error(detail.detail || "Approval process failed at server");
-      }
+      if (!res.ok) throw new Error("Action failed");
 
-      showToast("Document verified and pushed to next stage");
+      showToast("Action processed successfully");
       setTimeout(() => navigate(`/${userRole}`), 1000);
     } catch (err) {
       showToast(err.message, "error");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleReject = async () => {
-    try {
-      const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://localhost:8000/api/v1/documents/${id}/reject`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!res.ok) throw new Error("Rejection process failed");
-      showToast("Document marked as Rejected");
-      setTimeout(() => navigate(`/${userRole}`), 1000);
-    } catch (err) {
-      showToast(err.message, "error");
+      setShowRejectModal(false);
     }
   };
 
   if (loading) return (
-    <DashboardLayout role={userRole} navigate={navigate} title="Auditor Workspace">
-      <div className="flex flex-col items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-brand-accent border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-slate-500 text-sm">Synchronizing secure data stream...</p>
+    <DashboardLayout role={userRole} navigate={navigate} title="Secure Auditor">
+      <div className="flex flex-col items-center justify-center p-20">
+        <div className="w-12 h-12 border-2 border-brand-accent border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-slate-500 font-medium">Synchronizing document environment...</p>
       </div>
     </DashboardLayout>
   );
 
-  if (error) return (
-    <DashboardLayout role={userRole} navigate={navigate} title="System Error">
-      <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-xl text-center">
-        <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-white mb-2">Record Access Denied</h3>
-        <p className="text-slate-400 mb-6">{error}</p>
-        <Button variant="outline" onClick={() => navigate(`/${userRole}`)}>Return to Portal</Button>
-      </div>
-    </DashboardLayout>
-  );
+  const avgConfidence = (fields.reduce((acc, f) => acc + (f.confidence || 0), 0) / (fields.length || 1) * 100).toFixed(1);
 
   return (
-    <DashboardLayout role={userRole} navigate={navigate} title="In-Depth Document Audit">
+    <DashboardLayout role={userRole} navigate={navigate} title="Audit Control Center">
 
-      <div className="flex items-center gap-2 mb-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
-        <span className="hover:text-white cursor-pointer transition-colors" onClick={() => navigate(`/${userRole}`)}>Fleet Controls</span>
-        <span className="opacity-20">/</span>
-        <span className="text-brand-accent">Verification Protocol</span>
-        {isDirty && (
-          <>
-            <span className="opacity-20">/</span>
-            <span className="text-orange-500 animate-pulse">Unsaved Record Detected</span>
-          </>
-        )}
-      </div>
+      <div className="max-w-[1600px] mx-auto flex flex-col gap-6">
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr] xl:grid-cols-[minmax(350px,450px)_1fr] gap-8 min-h-0 h-[calc(100vh-220px)] overflow-hidden">
+        {/* Row 1: Top Navigation & Summary */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-brand-900/50 p-6 rounded-2xl border border-brand-800 shadow-xl">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate(`/${userRole}`)}
+              className="p-3 bg-brand-800 hover:bg-brand-700 rounded-xl text-slate-400 hover:text-white transition-all border border-brand-700"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-xl font-black text-white tracking-tight">{documentData.filename}</h2>
+                <span className={clsx(
+                  "text-[9px] px-2 py-0.5 rounded-full border uppercase font-black tracking-widest",
+                  documentData.status === 'REVIEW_PENDING' ? "border-orange-500/30 text-orange-400 bg-orange-500/5" : "border-brand-700 text-slate-500"
+                )}>
+                  {documentData.status.replace("_", " ")}
+                </span>
+              </div>
+              <div className="flex items-center gap-6 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="w-20 bg-brand-800 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-brand-accent h-full" style={{ width: `${avgConfidence}%` }} />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{avgConfidence}% AI Match</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1 bg-brand-950 rounded-lg border border-brand-800">
+                  <AlertCircle size={10} className={documentData.risk_score > 3 ? "text-red-400" : "text-emerald-400"} />
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Stability Index: {10 - documentData.risk_score}/10</span>
+                </div>
+                {documentData.created_at && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-brand-950 rounded-lg border border-brand-800">
+                    <Clock size={10} className="text-slate-500" />
+                    <span className="text-[9px] font-mono text-slate-500">
+                      {new Date(documentData.created_at).toLocaleDateString()} · {new Date(documentData.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
-        {/* Left: Restricted Preview View */}
-        <div className="flex flex-col gap-4 overflow-hidden h-full">
-          <div className="bg-brand-900 border border-brand-800 rounded-2xl overflow-hidden flex flex-col h-full shadow-2xl relative group">
-            <div className="px-5 py-4 bg-brand-950/80 backdrop-blur-md border-b border-brand-800 flex justify-between items-center shrink-0">
-              <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-brand-accent" /> Source Evidence
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              className="!border-red-500/20 !text-red-400 hover:!bg-red-500/10 !py-3 !px-6 text-xs uppercase font-bold tracking-widest"
+              onClick={() => setShowRejectModal(true)}
+            >
+              <Trash2 size={16} className="mr-2" />
+              Discard / Transfer
+            </Button>
+            <Button
+              variant="primary"
+              className="!py-3 !px-10 shadow-xl shadow-brand-accent/20 text-xs uppercase font-black tracking-widest"
+              onClick={() => handleDecision('APPROVE')}
+              disabled={saving}
+            >
+              <ShieldCheck size={18} className="mr-2" />
+              {saving ? "Processing" : (userRole === "approver" ? "Authorize Document" : "Verify & Forward")}
+            </Button>
+          </div>
+        </div>
+
+        {/* Row 2: Split View (Restricted to fixed height with scrolling) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[500px]">
+
+          {/* Evidence Panel */}
+          <div className="bg-brand-900 border border-brand-800 rounded-2xl flex flex-col shadow-2xl overflow-hidden group">
+            <div className="px-5 py-3 border-b border-brand-800 flex justify-between items-center bg-brand-950/40">
+              <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
+                <Activity size={12} className="text-brand-accent" /> Secure Visual Stream
               </span>
               <button
                 onClick={() => window.open(documentData.s3_url, '_blank')}
-                className="p-1.5 bg-white/5 hover:bg-brand-accent/20 rounded-lg transition-all text-slate-400 hover:text-brand-accent border border-white/5 hover:border-brand-accent/30"
-                title="View Full Resolution"
+                className="p-1.5 hover:bg-brand-accent/10 rounded-lg text-slate-400 hover:text-brand-accent transition-all"
               >
-                <ExternalLink size={14} />
+                <Maximize2 size={14} />
               </button>
             </div>
-            <div className="flex-1 bg-brand-950 relative min-h-[300px]">
+            <div className="flex-1 bg-brand-950/80 p-2">
               <iframe
                 src={`${documentData.s3_url}#toolbar=0`}
-                className="w-full h-full border-none opacity-80 group-hover:opacity-100 transition-opacity"
+                className="w-full h-full border-none rounded-lg opacity-90 group-hover:opacity-100 transition-opacity"
                 title="Evidence"
               />
             </div>
           </div>
 
-          <div className="bg-brand-950/50 border border-brand-800 rounded-xl p-4 flex items-start gap-4 shrink-0 hidden xl:flex">
-            <div className="w-10 h-10 rounded-lg bg-brand-800 flex items-center justify-center shrink-0 border border-brand-700">
-              <Info size={18} className="text-brand-accent" />
+          {/* Work Panel */}
+          <div className="bg-brand-900 border border-brand-800 rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex border-b border-brand-800 bg-brand-950/40">
+              <button
+                onClick={() => setActiveTab("metadata")}
+                className={clsx(
+                  "px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
+                  activeTab === "metadata" ? "text-brand-accent" : "text-slate-500 hover:text-slate-300"
+                )}
+              >
+                Metadata Extraction
+                {activeTab === "metadata" && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(var(--brand-accent-rgb),0.8)]" />}
+              </button>
+              <button
+                onClick={() => setActiveTab("audit")}
+                className={clsx(
+                  "px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
+                  activeTab === "audit" ? "text-brand-accent" : "text-slate-500 hover:text-slate-300"
+                )}
+              >
+                Audit Trail
+                {activeTab === "audit" && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(var(--brand-accent-rgb),0.8)]" />}
+              </button>
             </div>
-            <div>
-              <h4 className="text-[10px] font-bold text-white uppercase mb-1">Audit Protocol</h4>
-              <p className="text-[11px] text-slate-500 leading-relaxed italic">
-                Cross-reference high-confidence extraction points with source.
-              </p>
+
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+              <AnimatePresence mode="wait">
+                {activeTab === "metadata" ? (
+                  <motion.div
+                    key="meta"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"
+                  >
+                    {fields.map((field, idx) => (
+                      <div key={idx} className="space-y-2 group">
+                        <div className="flex justify-between items-center opacity-60 group-hover:opacity-100 transition-opacity">
+                          <label className="text-[9px] text-brand-accent font-black uppercase tracking-widest">{field.key}</label>
+                          <span className="text-[8px] text-slate-600 font-mono">{(field.confidence * 100).toFixed(0)}%</span>
+                        </div>
+                        <input
+                          value={field.value}
+                          onChange={(e) => handleFieldChange(idx, e.target.value)}
+                          className="w-full bg-brand-950/30 border border-brand-800 hover:border-brand-700 focus:border-brand-accent py-2.5 px-4 rounded-xl text-xs text-white outline-none transition-all"
+                        />
+                      </div>
+                    ))}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="audit"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                    className="space-y-8"
+                  >
+                    {/* Risk Indicators */}
+                    <div className="space-y-3">
+                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                        <Activity size={12} /> AI Risk Assessment
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        {documentData?.risk_indicators?.length > 0 ? (
+                          [...new Set(documentData.risk_indicators)].map((risk, i) => (
+                            <div key={i} className="flex flex-col justify-center p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-red-400">{risk}</span>
+                                <AlertCircle size={14} className="text-red-500/50" />
+                              </div>
+                              {risk === 'HIGH_VALUE_THRESHOLD' && (
+                                <span className="text-[9px] text-slate-500 mt-1">
+                                  Disclaimer: This document was flagged because it contains a monetary value exceeding the limit of $5,000.
+                                </span>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-emerald-500/80 text-[10px] font-bold">
+                            Zero Risks Detected in Current Pattern
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Timeline / History */}
+                    <div className="space-y-4">
+                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                        <History size={12} /> Decision History
+                      </h4>
+                      <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-brand-800">
+                        <div className="relative">
+                          <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-brand-800 border-4 border-brand-950" />
+                          <div className="p-4 bg-brand-950/50 border border-brand-800 rounded-xl">
+                            <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Initial Ingestion</span>
+                            <p className="text-[10px] text-slate-400">System captured and archived record.</p>
+                          </div>
+                        </div>
+                        {documentData?.reviewer_notes && (
+                          <div className="relative">
+                            <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-orange-500 border-4 border-brand-950" />
+                            <div className="p-4 bg-brand-950 rounded-xl border border-orange-500/20">
+                              <span className="text-[9px] font-black text-orange-500 uppercase block mb-1">Human Review Phase</span>
+                              <p className="text-[11px] text-slate-200 italic leading-relaxed">"{documentData.reviewer_notes}"</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
 
-        {/* Right: Interactive Smart Editor */}
-        <div className="bg-brand-900 border border-brand-800 rounded-2xl flex flex-col shadow-2xl overflow-hidden relative h-full">
-          {/* Contextual Action Header */}
-          <div className="px-8 py-6 bg-brand-950 border-b border-brand-800 flex justify-between items-center z-10 shrink-0">
-            <div className="flex items-center gap-5">
-              <button
-                onClick={() => navigate(`/${userRole}`)}
-                className="p-2.5 bg-brand-900/50 hover:bg-brand-800 rounded-xl text-slate-500 hover:text-white transition-all border border-brand-800"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <div className="overflow-hidden">
-                <h2 className="text-xl md:text-2xl font-black text-white tracking-tight leading-none mb-2 truncate max-w-[200px] md:max-w-md">{documentData.filename}</h2>
-                <div className="flex items-center gap-3">
-                  <span className={clsx(
-                    "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border",
-                    documentData.status === 'REVIEW_PENDING' ? "bg-orange-500/10 text-orange-400 border-orange-500/20" : "bg-brand-800 text-slate-400 border-brand-700"
-                  )}>
-                    Stage: {documentData.status.replace("_", " ")}
-                  </span>
-                </div>
-              </div>
-            </div>
+        {/* Row 3: Dedicated Decision Area (Bottom of Page) */}
+        <div className="bg-brand-950 border border-brand-800 rounded-2xl p-8 shadow-2xl flex flex-col md:flex-row gap-8">
 
-            <div className="flex items-center gap-4">
-              <button
-                onClick={handleReject}
-                className="hidden md:block px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-red-400 transition-all uppercase tracking-widest"
-              >
-                Reject
-              </button>
-              <Button
-                variant="primary"
-                className="!py-3 !px-6 md:!px-10 shadow-xl shadow-brand-accent/30 rounded-xl flex items-center gap-3 !text-sm"
-                onClick={handleApprove}
-                disabled={saving}
-              >
-                {saving ? "Processing..." : (
-                  <><ShieldCheck size={18} /> Verify Record</>
-                )}
-              </Button>
+          <div className="flex-1 space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-white uppercase tracking-widest">Auditor Statement</label>
+                <span className="text-[9px] text-slate-500 font-mono">{notes.length} chars</span>
+              </div>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Provide justification for authorization or transfer..."
+                className="w-full bg-brand-900/50 border border-brand-800 focus:border-brand-accent rounded-xl p-4 text-xs text-white outline-none min-h-[80px] transition-all resize-none shadow-inner"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-brand-cyan uppercase tracking-widest flex items-center gap-1.5">
+                  <Send size={9} /> Message to Uploader
+                </label>
+                <span className="text-[9px] text-slate-600 font-mono">Optional feedback</span>
+              </div>
+              <textarea
+                value={uploaderMessage}
+                onChange={(e) => setUploaderMessage(e.target.value)}
+                placeholder="Leave feedback for the document uploader (e.g. missing pages, wrong format)..."
+                className="w-full bg-brand-950/60 border border-brand-cyan/20 focus:border-brand-cyan rounded-xl p-4 text-xs text-white outline-none min-h-[70px] transition-all resize-none shadow-inner"
+              />
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar bg-brand-900/30">
-            <div className="max-w-4xl mx-auto space-y-12">
-
-              {/* Detailed Attributes Section */}
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-10">
+          <div className="w-full md:w-[400px] flex flex-col justify-between py-1">
+            {userRole === "approver" ? (
+              <div
+                onClick={() => setDigitallySigned(!digitallySigned)}
+                className={clsx(
+                  "group cursor-pointer flex items-center justify-between p-6 rounded-2xl border transition-all duration-300",
+                  digitallySigned
+                    ? "bg-brand-accent/10 border-brand-accent/40 shadow-[0_0_20px_rgba(var(--brand-accent-rgb),0.1)]"
+                    : "bg-brand-900/50 border-brand-800 hover:border-brand-700"
+                )}
+              >
                 <div className="flex items-center gap-4">
-                  <h3 className="text-[10px] font-black text-white uppercase tracking-[0.4em]">Granular Data Points</h3>
-                  <div className="h-[1px] bg-brand-800 flex-1 opacity-50" />
+                  <div className={clsx(
+                    "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
+                    digitallySigned ? "bg-brand-accent text-white" : "bg-brand-800 text-slate-600 group-hover:text-slate-400"
+                  )}>
+                    <UserCheck size={24} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-white uppercase tracking-tight">Apply Digital Identity</h4>
+                    <p className="text-[10px] text-slate-500 font-medium leading-tight">Certifying data integrity & compliance.</p>
+                  </div>
                 </div>
-
-                {fields.length === 0 ? (
-                  <div className="p-16 border border-dashed border-brand-800 rounded-2xl text-center">
-                    <p className="text-slate-500 text-sm italic">No granular metadata blocks found.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-10">
-                    {fields.map((field, idx) => (
-                      <div key={idx} className="space-y-3 group">
-                        <div className="flex justify-between items-center transition-opacity opacity-60 group-hover:opacity-100">
-                          <label className="text-[10px] text-brand-accent font-black uppercase tracking-widest">{field.key}</label>
-                          <span className="text-[9px] text-slate-600 font-mono">CONFID: {(field.confidence * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className="relative">
-                          <input
-                            value={field.value}
-                            onChange={(e) => handleFieldChange(idx, e.target.value)}
-                            className="w-full bg-transparent border-b border-brand-800 focus:border-brand-accent py-2 px-0 text-sm text-white focus:text-white outline-none font-medium transition-all"
-                            placeholder="[NULL RECORD]"
-                          />
-                          <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-brand-accent transition-all duration-300 group-focus-within:w-full" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className={clsx(
+                  "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                  digitallySigned ? "bg-brand-accent border-brand-accent text-white" : "border-brand-700 bg-brand-950"
+                )}>
+                  {digitallySigned && <Check size={14} strokeWidth={3} />}
+                </div>
               </div>
-            </div>
-          </div>
+            ) : (
+              <div className="p-6 bg-brand-900/30 border border-brand-800 rounded-2xl">
+                <div className="flex items-center gap-3 mb-2">
+                  <ShieldCheck size={18} className="text-brand-accent" />
+                  <h4 className="text-xs font-black text-white uppercase uppercase">Verification Mode</h4>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">As a reviewer, your notes will be forwarded to the ultimate approver for final authorization.</p>
+              </div>
+            )}
 
-          {/* Persistence Bar */}
-          <div className="px-10 py-5 border-t border-brand-800 bg-brand-950/40 flex justify-between items-center shrink-0">
-            <div className="flex items-center gap-4 text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-              <div className={clsx("w-2 h-2 rounded-full", isDirty ? "bg-orange-500 animate-pulse" : "bg-green-500")} />
-              {isDirty ? "Unsaved Changes" : "System Synced"}
+            <div className="flex justify-between items-center mt-6">
+              <div className="flex items-center gap-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+                <div className={clsx("w-2 h-2 rounded-full", isDirty ? "bg-orange-500 animate-pulse" : "bg-emerald-500")} />
+                {isDirty ? "Cache Mismatch" : "Records Synced"}
+              </div>
+              <button
+                onClick={() => handleSaveChanges()}
+                className={clsx(
+                  "flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                  isDirty ? "text-brand-accent hover:opacity-80" : "text-slate-800 cursor-default"
+                )}
+                disabled={!isDirty || saving}
+              >
+                <Save size={14} /> Commit Sync
+              </button>
             </div>
-            <button
-              onClick={() => handleSaveChanges()}
-              disabled={saving || !isDirty}
-              className={clsx(
-                "flex items-center gap-3 text-[10px] font-black uppercase transition-all tracking-widest py-2 px-6 rounded-lg",
-                isDirty
-                  ? "bg-brand-accent/10 text-brand-accent hover:bg-white/5 border border-brand-accent/20"
-                  : "text-slate-700 cursor-not-allowed"
-              )}
-            >
-              <Save size={14} className={saving ? "animate-spin" : ""} />
-              {saving ? "Commiting..." : "Manual Sync"}
-            </button>
           </div>
         </div>
 
       </div>
 
-      {/* Persistence Toast */}
+      {/* Intervention Modal */}
+      <AnimatePresence>
+        {showRejectModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowRejectModal(false)}
+              className="absolute inset-0 bg-brand-1000/95 backdrop-blur-xl"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md bg-brand-900 border border-brand-800 rounded-[32px] p-10 text-center shadow-2xl"
+            >
+              <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 text-red-500 border border-red-500/20 shadow-lg">
+                <XCircle size={40} />
+              </div>
+              <h3 className="text-2xl font-black text-white mb-3 uppercase tracking-tight">Audit Intervention</h3>
+              <p className="text-sm text-slate-400 mb-10 leading-relaxed">
+                Choose the destination for this record. Returning to reviewer shifts the workflow back, while discarding permanently archives it as a failure.
+              </p>
+
+              <div className="space-y-4">
+                <button
+                  onClick={() => handleDecision('RETURN')}
+                  className="w-full py-5 bg-brand-800 hover:bg-brand-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all border border-brand-700"
+                >
+                  <Send size={18} className="text-orange-400" />
+                  Reroute to Reviewer
+                </button>
+                <button
+                  onClick={() => handleDecision('REJECT')}
+                  className="w-full py-5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all border border-red-500/20"
+                >
+                  <Trash2 size={18} />
+                  Terminate Record
+                </button>
+                <button onClick={() => setShowRejectModal(false)} className="text-[10px] font-black text-slate-600 uppercase tracking-widest mt-4 hover:text-white transition-colors">
+                  Abort & Continue Audit
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {toast && (
         <div className={clsx(
-          "fixed bottom-8 right-8 px-6 py-4 rounded-xl shadow-2xl z-50 border flex items-center gap-4 transition-all animate-in slide-in-from-right-10",
-          toast.type === 'error' ? 'bg-red-900 border-red-800 text-red-200' : 'bg-brand-900 border-brand-800 text-white'
+          "fixed bottom-8 right-8 px-8 py-5 rounded-2xl shadow-2xl z-[300] border-2 flex items-center gap-4 animate-in slide-in-from-right-10",
+          toast.type === 'error' ? 'bg-red-950 border-red-900 text-red-200' : 'bg-brand-900 border-brand-800 text-white'
         )}>
-          <div className={clsx("w-2 h-2 rounded-full", toast.type === 'error' ? "bg-red-500" : "bg-brand-accent")} />
-          <p className="text-xs font-bold">{toast.msg}</p>
+          <div className={clsx("w-2.5 h-2.5 rounded-full", toast.type === 'error' ? "bg-red-500" : "bg-brand-accent shadow-[0_0_8px_rgba(var(--brand-accent-rgb),1)]")} />
+          <p className="text-sm font-bold tracking-tight">{toast.msg}</p>
         </div>
       )}
+
     </DashboardLayout>
   );
 }

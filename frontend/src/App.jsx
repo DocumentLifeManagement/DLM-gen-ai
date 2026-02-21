@@ -18,7 +18,7 @@ import UserManagement from "./pages/admin/UserManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
-  const { currentPath, navigate, params } = useRouter();
+  const { currentPath, navigate, params, query } = useRouter();
 
   // role stored after login (mock RBAC)
   const userRole = localStorage.getItem("role") || "uploader";
@@ -125,7 +125,7 @@ export default function App() {
           allowedRoles={["admin"]}
           navigate={navigate}
         >
-          <AdminDashboard navigate={navigate} />
+          <AdminDashboard navigate={navigate} query={query} />
         </ProtectedRoute>
       );
 

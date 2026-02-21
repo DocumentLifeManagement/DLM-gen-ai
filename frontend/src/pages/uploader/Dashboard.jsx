@@ -69,7 +69,8 @@ export default function UploaderDashboard({ navigate }) {
       id: Math.random().toString(36).substr(2, 9),
       status: 'pending',
       progress: 0,
-      tag: 'General' // Default tag
+      tag: 'General', // Default tag
+      notes: ''       // New feature: custom per-file notes
     }));
     setUploadQueue(prev => [...prev, ...newFiles]);
   };
@@ -91,6 +92,9 @@ export default function UploaderDashboard({ navigate }) {
 
       const formData = new FormData();
       formData.append("file", item.file);
+      if (item.notes) {
+        formData.append("notes", item.notes);
+      }
       // formData.append("tag", item.tag); // If backend supports it later
 
       try {
@@ -275,45 +279,54 @@ export default function UploaderDashboard({ navigate }) {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
-                      className="bg-brand-950/50 border border-brand-800 p-4 rounded-lg flex items-center gap-4 group"
+                      className="bg-brand-950/50 border border-brand-800 p-4 rounded-lg flex flex-col gap-3 group"
                     >
-                      <div className="w-10 h-10 rounded bg-brand-800 flex items-center justify-center text-slate-400 shrink-0">
-                        <File size={20} />
+                      <div className="flex items-center gap-4 w-full">
+                        <div className="w-10 h-10 rounded bg-brand-800 flex items-center justify-center text-slate-400 shrink-0">
+                          <File size={20} />
+                        </div>
+
+                        <div className="flex-1 min-w-0 w-full">
+                          <div className="flex justify-between items-start mb-1">
+                            <p className="font-medium text-white truncate text-sm">{item.file.name}</p>
+                            <button
+                              onClick={() => removeFile(item.id)}
+                              className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+
+                          <div className="flex justify-between items-center text-xs text-slate-500 mb-2">
+                            <span>{(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
+                            <span className={item.status === 'done' ? 'text-green-400' : item.status === 'error' ? 'text-red-400' : ''}>
+                              {item.status === 'pending' ? 'Ready' : item.status === 'uploading' ? 'Uploading...' : item.status}
+                            </span>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="w-full bg-brand-800/50 rounded-full h-1.5 overflow-hidden">
+                            <motion.div
+                              className={`h-full ${item.status === 'error' ? 'bg-red-500' : item.status === 'done' ? 'bg-green-500' : 'bg-brand-accent'}`}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${item.progress}%` }}
+                            />
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-1">
-                          <p className="font-medium text-white truncate text-sm">{item.file.name}</p>
-                          <button
-                            onClick={() => removeFile(item.id)}
-                            className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-
-                        <div className="flex justify-between items-center text-xs text-slate-500 mb-2">
-                          <span>{(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
-                          <span className={item.status === 'done' ? 'text-green-400' : item.status === 'error' ? 'text-red-400' : ''}>
-                            {item.status === 'pending' ? 'Ready' : item.status === 'uploading' ? 'Uploading...' : item.status}
-                          </span>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div className="w-full bg-brand-800/50 rounded-full h-1.5 overflow-hidden">
-                          <motion.div
-                            className={`h-full ${item.status === 'error' ? 'bg-red-500' : item.status === 'done' ? 'bg-green-500' : 'bg-brand-accent'}`}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${item.progress}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Tag Selection (Visual Only for now) */}
+                      {/* Notes and Tag Input */}
                       {item.status === 'pending' && (
-                        <div className="hidden sm:block">
+                        <div className="mt-3 flex flex-col sm:flex-row gap-3 w-full">
+                          <input
+                            type="text"
+                            placeholder="Add notes for reviewer (optional)..."
+                            className="flex-1 bg-brand-900 border border-brand-700 text-xs text-slate-300 rounded px-3 py-1.5 focus:outline-none focus:border-brand-accent transition-colors placeholder:text-slate-600"
+                            value={item.notes}
+                            onChange={(e) => updateFileStatus(item.id, { notes: e.target.value })}
+                          />
                           <select
-                            className="bg-brand-900 border border-brand-700 text-xs text-slate-300 rounded px-2 py-1 focus:outline-none focus:border-brand-accent"
+                            className="bg-brand-900 border border-brand-700 text-xs text-slate-300 rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent shrink-0"
                             value={item.tag}
                             onChange={(e) => updateFileStatus(item.id, { tag: e.target.value })}
                           >

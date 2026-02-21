@@ -30,6 +30,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 
     token = create_access_token({
         "sub": user.email,
+        "name": user.full_name or user.email.split("@")[0],
         "role": user.role.name
     })
 

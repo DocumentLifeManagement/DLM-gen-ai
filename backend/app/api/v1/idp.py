@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
 import boto3
 import uuid
 import os
@@ -62,6 +62,7 @@ def get_textract_job_results(job_id, max_pages=1000):
 @router.post("/upload-and-analyze", status_code=status.HTTP_202_ACCEPTED)
 async def upload_and_analyze(
     file: UploadFile = File(...), 
+    notes: str = Form(None),
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_role(["UPLOADER"]))
 ):
@@ -84,6 +85,7 @@ async def upload_and_analyze(
         s3_key=key,
         filename=file.filename,
         mime_type=file.content_type,
+        uploader_notes=notes,
         status="INGESTED"
     )
     db.add(doc)

@@ -12,7 +12,8 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal
+  SlidersHorizontal,
+  AlertCircle
 } from "lucide-react";
 
 export default function ReviewerDashboard({ navigate }) {
@@ -66,7 +67,8 @@ export default function ReviewerDashboard({ navigate }) {
 
     if (search) {
       temp = temp.filter((doc) =>
-        doc.filename.toLowerCase().includes(search.toLowerCase())
+        doc.filename.toLowerCase().includes(search.toLowerCase()) ||
+        doc.id?.toString().includes(search)
       );
     }
 
@@ -123,7 +125,7 @@ export default function ReviewerDashboard({ navigate }) {
     const styles = {
       UPLOADED: "bg-blue-500/10 text-blue-400 border-blue-500/20",
       PROCESSING: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-      REVIEW_PENDING: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+      REVIEW_PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
       APPROVAL_PENDING: "bg-green-500/10 text-green-400 border-green-500/20",
       REVIEWED: "bg-green-500/10 text-green-400 border-green-500/20",
       REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
@@ -153,7 +155,7 @@ export default function ReviewerDashboard({ navigate }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
           <input
             type="text"
-            placeholder="Search documents by name..."
+            placeholder="Search documents by name or ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-brand-accent transition-colors"
@@ -193,9 +195,10 @@ export default function ReviewerDashboard({ navigate }) {
       <div className="bg-brand-900 border border-brand-800 rounded-xl overflow-hidden shadow-xl">
         {/* Header */}
         <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-brand-800 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-brand-950/50">
-          <div className="col-span-12 md:col-span-4">Document</div>
+          <div className="col-span-12 md:col-span-3">Document / ID</div>
           <div className="hidden md:block md:col-span-2">Date</div>
-          <div className="hidden md:block md:col-span-2">Time</div>
+          <div className="hidden md:block md:col-span-1 text-center">Time</div>
+          <div className="hidden md:block md:col-span-2 text-center">Risk Analysis</div>
           <div className="col-span-6 md:col-span-2 text-center">Status</div>
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
@@ -219,21 +222,38 @@ export default function ReviewerDashboard({ navigate }) {
                   className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-brand-800/30 transition-colors group cursor-pointer"
                   onClick={() => navigate(`/reviewer/document/${doc.id}`)}
                 >
-                  <div className="col-span-12 md:col-span-4 font-medium text-white flex items-center gap-4">
+                  <div className="col-span-12 md:col-span-3 font-medium text-white flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${doc.status === 'NEEDS_REVIEW' ? 'bg-orange-500/10 text-orange-400' : 'bg-brand-800 text-slate-400'}`}>
                       <FileText size={20} />
                     </div>
                     <div className="truncate">
-                      <p className="truncate text-sm md:text-base">{doc.filename}</p>
-                      <p className="md:hidden text-xs text-slate-500 mt-1">{new Date(doc.created_at).toLocaleDateString()}</p>
+                      <p className="truncate text-sm md:text-base text-white">{doc.filename}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5 font-mono">ID: {doc.id}</p>
                     </div>
                   </div>
-                  <div className="hidden md:block md:col-span-2 text-slate-400 text-sm">
+                  <div className="hidden md:block md:col-span-2 text-slate-400 text-xs">
                     {new Date(doc.created_at).toLocaleDateString()}
                   </div>
-                  <div className="hidden md:block md:col-span-2 text-slate-500 text-xs font-mono">
+                  <div className="hidden md:block md:col-span-1 text-[10px] font-mono text-slate-500 text-center">
                     {new Date(doc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
+
+                  {/* Risk Analysis Pillar */}
+                  <div className="hidden md:block md:col-span-2 text-center">
+                    {doc.risk_indicators?.length > 0 ? (
+                      <div className="flex items-center justify-center gap-2 text-red-500">
+                        <AlertCircle size={14} className="animate-pulse" />
+                        <span className="text-[9px] font-black uppercase tracking-tighter">
+                          Pattern Risk
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20 font-bold uppercase tracking-tighter scale-90">
+                        Low Risk
+                      </span>
+                    )}
+                  </div>
+
                   <div className="col-span-6 md:col-span-2 flex justify-center">
                     <span className={`text-[9px] md:text-[10px] px-3 py-1 rounded-full border font-black uppercase tracking-tight whitespace-nowrap ${statusBadge(doc.status)}`}>
                       {doc.status ? doc.status.replace("_", " ") : "INGESTED"}

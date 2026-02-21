@@ -21,10 +21,11 @@ import {
   BarChart3,
   RefreshCw,
   Archive,
-  History
+  History,
+  ShieldCheck
 } from "lucide-react";
 
-export default function AdminDashboard({ navigate }) {
+export default function AdminDashboard({ navigate, query }) {
   const userRole = "admin";
 
   const [documents, setDocuments] = useState([]);
@@ -36,7 +37,7 @@ export default function AdminDashboard({ navigate }) {
   const [sortOrder, setSortOrder] = useState("desc");
   const [toast, setToast] = useState(null);
   const [page, setPage] = useState(1);
-  const [activeTab, setActiveTab] = useState("active"); // active, bin, archived
+  const [activeTab, setActiveTab] = useState(query?.tab || "active"); // Initialize from query params
 
   const limit = 10;
   const SLA_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -76,6 +77,12 @@ export default function AdminDashboard({ navigate }) {
     }
   };
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    // Update URL without full refresh to preserve navigation state
+    navigate(`/admin?tab=${tab}`);
+  };
+
   const isSLABreached = (createdAt) => {
     const created = new Date(createdAt);
     const now = new Date();
@@ -97,7 +104,8 @@ export default function AdminDashboard({ navigate }) {
 
     if (search) {
       temp = temp.filter((doc) =>
-        doc.filename.toLowerCase().includes(search.toLowerCase())
+        doc.filename?.toLowerCase().includes(search.toLowerCase()) ||
+        doc.id?.toString().includes(search)
       );
     }
 
@@ -150,6 +158,8 @@ export default function AdminDashboard({ navigate }) {
 
   const handleRestore = async (id, e) => {
     e.stopPropagation();
+    // Find doc before removing it to check if it was archived
+    const docToRestore = documents.find(d => d.id === id);
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(`http://localhost:8000/api/v1/documents/${id}/restore`, {
@@ -159,7 +169,14 @@ export default function AdminDashboard({ navigate }) {
 
       if (!res.ok) throw new Error("Failed to restore");
       setDocuments(docs => docs.filter(d => d.id !== id));
-      showToast("Document restored successfully");
+
+      if (docToRestore?.archived_at) {
+        showToast("Document restored to Archive");
+        handleTabChange("archived");
+      } else {
+        showToast("Document restored to Active Files");
+        handleTabChange("active");
+      }
     } catch (err) {
       showToast("Failed to restore document");
     }
@@ -213,7 +230,7 @@ export default function AdminDashboard({ navigate }) {
   const total = documents.length; // Note: this count is specific to the current tab
   const approvedDocs = documents.filter(d => d.status === "APPROVED").length;
   const completionRate = total > 0 ? ((approvedDocs / total) * 100).toFixed(1) : 0;
-  const activeDocs = documents.filter(d => !["APPROVED", "REJECTED", "FAILED"].includes(d.status));
+  const activeDocsArr = documents.filter(d => !["APPROVED", "REJECTED", "FAILED"].includes(d.status));
   const slaBreaches = documents.filter(d =>
     !["APPROVED", "REJECTED", "FAILED"].includes(d.status) && isSLABreached(d.created_at)
   ).length;
@@ -245,7 +262,7 @@ export default function AdminDashboard({ navigate }) {
             />
             <StatCard
               title="System Load"
-              value={`${activeDocs.length} Active`}
+              value={`${activeDocsArr.length} Active`}
               icon={Activity}
               color="text-brand-cyan"
               compact={true}
@@ -264,21 +281,21 @@ export default function AdminDashboard({ navigate }) {
       {/* Tabs */}
       <div className="flex gap-4 mb-6 border-b border-brand-800">
         <button
-          onClick={() => setActiveTab("active")}
+          onClick={() => handleTabChange("active")}
           className={`pb-3 px-4 text-sm font-medium transition-colors relative ${activeTab === 'active' ? 'text-brand-accent' : 'text-slate-400 hover:text-white'}`}
         >
           <span className="flex items-center gap-2"><FileText size={16} /> Active Files</span>
           {activeTab === 'active' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(56,189,248,0.5)]"></div>}
         </button>
         <button
-          onClick={() => setActiveTab("archived")}
+          onClick={() => handleTabChange("archived")}
           className={`pb-3 px-4 text-sm font-medium transition-colors relative ${activeTab === 'archived' ? 'text-brand-accent' : 'text-slate-400 hover:text-white'}`}
         >
           <span className="flex items-center gap-2"><Archive size={16} /> Archived Files</span>
           {activeTab === 'archived' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(56,189,248,0.5)]"></div>}
         </button>
         <button
-          onClick={() => setActiveTab("bin")}
+          onClick={() => handleTabChange("bin")}
           className={`pb-3 px-4 text-sm font-medium transition-colors relative ${activeTab === 'bin' ? 'text-brand-accent' : 'text-slate-400 hover:text-white'}`}
         >
           <span className="flex items-center gap-2"><Trash2 size={16} /> Bin</span>
@@ -337,8 +354,10 @@ export default function AdminDashboard({ navigate }) {
         {/* Header */}
         <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-brand-800 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-brand-950/50">
           <div className="col-span-12 md:col-span-4">Document / ID</div>
-          <div className="hidden md:block md:col-span-3">Date</div>
-          <div className="col-span-6 md:col-span-3">Process Stage</div>
+          <div className="hidden md:block md:col-span-1">Date</div>
+          <div className="hidden md:block md:col-span-1 text-center">Time</div>
+          <div className="hidden md:block md:col-span-2 text-center">Risk Index</div>
+          <div className="col-span-6 md:col-span-2 text-center">Stage</div>
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
 
@@ -369,7 +388,7 @@ export default function AdminDashboard({ navigate }) {
                         {breached && activeTab === 'active' ? <AlertTriangle size={20} /> : <FileText size={20} />}
                       </div>
                       <div className="truncate">
-                        <p className="truncate text-sm md:text-base flex items-center gap-2">
+                        <p className="truncate text-sm md:text-base flex items-center gap-2 text-white">
                           {doc.filename}
                           {breached && activeTab === 'active' && (
                             <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">
@@ -380,13 +399,30 @@ export default function AdminDashboard({ navigate }) {
                         <p className="text-[10px] text-slate-500 mt-0.5 font-mono">ID: {doc.id}</p>
                       </div>
                     </div>
-                    <div className="hidden md:block md:col-span-3 text-slate-400 text-sm">
+                    <div className="hidden md:block md:col-span-1 text-slate-400 text-xs">
                       {new Date(doc.created_at).toLocaleDateString()}
-                      <span className="block text-xs opacity-60 m-1">
-                        {new Date(doc.created_at).toLocaleTimeString()}
-                      </span>
                     </div>
-                    <div className="col-span-6 md:col-span-3">
+                    <div className="hidden md:block md:col-span-1 text-slate-500 text-[10px] font-mono text-center">
+                      {new Date(doc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+
+                    {/* New Risk Analysis Pillar */}
+                    <div className="hidden md:block md:col-span-2 text-center">
+                      {doc.risk_indicators?.length > 0 ? (
+                        <div className="flex flex-col gap-1 items-center">
+                          <span className="text-[9px] px-2 py-0.5 bg-red-500/10 text-red-500 rounded border border-red-500/20 font-bold w-fit">
+                            {doc.risk_indicators[0]}
+                          </span>
+                          {doc.risk_indicators.length > 1 && <span className="text-[8px] text-slate-600 font-mono tracking-tighter">+{doc.risk_indicators.length - 1} MORE FLAGS</span>}
+                        </div>
+                      ) : (
+                        <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20 font-bold uppercase tracking-tighter scale-90">
+                          Low Risk
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="col-span-6 md:col-span-2 flex justify-center">
                       <span className={`text-[10px] md:text-xs px-2.5 py-1 rounded-full border font-medium ${statusBadge(doc.status)}`}>
                         {doc.status ? doc.status.replace("_", " ") : "INGESTED"}
                       </span>
@@ -433,6 +469,13 @@ export default function AdminDashboard({ navigate }) {
                             <RefreshCw size={18} />
                           </button>
                           <button
+                            className="p-2 text-slate-400 hover:text-white hover:bg-brand-800 rounded-lg transition-colors"
+                            title="View Details"
+                            onClick={() => navigate(`/admin/document/${doc.id}`)}
+                          >
+                            <Eye size={18} />
+                          </button>
+                          <button
                             onClick={(e) => handlePurge(doc.id, e)}
                             className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
                             title="Permanently Delete"
@@ -458,6 +501,13 @@ export default function AdminDashboard({ navigate }) {
                             onClick={() => navigate(`/admin/document/${doc.id}`)}
                           >
                             <Eye size={18} />
+                          </button>
+                          <button
+                            onClick={(e) => handleDelete(doc.id, e)}
+                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
+                            title="Move to Bin"
+                          >
+                            <Trash2 size={18} />
                           </button>
                         </>
                       )}

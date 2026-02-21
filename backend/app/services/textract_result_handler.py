@@ -108,10 +108,49 @@ def handle_completed_textract_job(job: TextractJob):
     # Update document with identified fields
     doc = job.document
 
-    # ---- 5️⃣ Model B Logic: Auto-Approve if confidence is high ----
+    # ---- 5️⃣ Risk Assessment Logic ----
     avg_confidence = total_confidence / kv_count if kv_count > 0 else 0
-    if avg_confidence > 0.85:
-        doc.status = "APPROVED" # Or another status that skips reviewer
+    indicators = []
+    risk_score = 0.0
+
+    # Indicator: Low overall confidence
+    if avg_confidence < 0.80:
+        indicators.append("MODERATE_CONFIDENCE_RISK")
+        risk_score += 3.0
+    elif avg_confidence < 0.60:
+        indicators.append("HIGH_CONFIDENCE_RISK")
+        risk_score += 5.0
+
+    # Indicator: Amount Anomaly (Checking for values > 5000 in fields localized as Amounts)
+    for kv in kv_pairs:
+        k_lower = kv["key"].lower()
+        if any(syn in k_lower for syn in amount_synonyms):
+            try:
+                # Basic string cleaning for amount parsing
+                clean_val = kv["value"].replace("$", "").replace(",", "").strip()
+                amount = float(clean_val)
+                if amount > 5000:
+                    if "HIGH_VALUE_THRESHOLD" not in indicators:
+                        indicators.append("HIGH_VALUE_THRESHOLD")
+                        risk_score += 4.0
+            except:
+                pass
+
+    # Indicator: Low confidence on critical individual field
+    for kv in kv_pairs:
+        k_lower = kv["key"].lower()
+        if ("total" in k_lower or "amount" in k_lower) and (kv["val_conf"] or 0) < 0.70:
+            if "CRITICAL_FIELD_UNCERTAINTY" not in indicators:
+                indicators.append("CRITICAL_FIELD_UNCERTAINTY")
+                risk_score += 2.0
+
+    # Normalize risk score to 10 max
+    doc.risk_score = min(10.0, risk_score)
+    doc.risk_indicators = indicators
+
+    # Update document status based on assessment
+    if avg_confidence > 0.85 and doc.risk_score < 3.0:
+        doc.status = "APPROVED" # Auto-approve if high confidence and low risk
     else:
         doc.status = "REVIEW_PENDING"
 

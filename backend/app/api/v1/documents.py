@@ -44,6 +44,12 @@ def get_document(document_id: int, db: Session = Depends(get_db)):
         "status": doc.status,
         "created_at": doc.created_at.isoformat() if doc.created_at else None,
         "s3_url": presigned_url, 
+        "reviewer_notes": doc.reviewer_notes,
+        "approver_notes": doc.approver_notes,
+        "risk_score": doc.risk_score,
+        "risk_indicators": doc.risk_indicators or [],
+        "digitally_signed_by": doc.digitally_signed_by,
+        "digitally_signed_at": doc.digitally_signed_at.isoformat() if doc.digitally_signed_at else None,
         "fields": [
             {
                 "id": kv.id,
@@ -72,6 +78,9 @@ def get_document_lifecycle(
             "to": h.to_state,
             "actor_type": h.actor_type,
             "actor_id": h.actor_id,
+            "actor_name": h.actor_name,
+            "actor_email": h.actor_email,
+            "notes": h.notes,
             "timestamp": h.timestamp.isoformat() if h.timestamp else None,
         }
         for h in history
@@ -138,7 +147,8 @@ def restore_document(document_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Document not found")
     
     doc.deleted_at = None
-    doc.archived_at = None # In case it was restored from archive too, or just to be safe
+    # If it was archived, it will stay in archived by having archived_at != None
+    # If it wasn't archived, it will go back to active as both are None.
     db.commit()
     return {"message": "Document restored successfully"}
 
@@ -150,7 +160,7 @@ def archive_document(document_id: int, db: Session = Depends(get_db)):
     
     from datetime import datetime
     doc.archived_at = datetime.utcnow()
-    # doc.status = "ARCHIVED" # Optional: changing status might be good for clarity
+    doc.status = "ARCHIVED"
     db.commit()
     return {"message": "Document archived successfully"}
 
