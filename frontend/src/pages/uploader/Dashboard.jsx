@@ -564,8 +564,8 @@ export default function UploaderDashboard({ navigate }) {
 
       <AnimatePresence>
         {previewDoc && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-6" onClick={() => setPreviewDoc(null)}>
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onClick={e => e.stopPropagation()} className="bg-brand-900 border border-brand-800 rounded-3xl w-full max-w-6xl h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-end md:items-center justify-center z-50 p-0 md:p-6" onClick={() => setPreviewDoc(null)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0, y: 50 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 50 }} onClick={e => e.stopPropagation()} className="bg-brand-900 border border-brand-800 rounded-t-3xl md:rounded-3xl w-full max-w-6xl h-[92vh] md:h-[85vh] overflow-hidden flex flex-col shadow-2xl">
               <div className="px-8 py-6 border-b border-brand-800 flex justify-between items-center bg-brand-950">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-brand-800 flex items-center justify-center text-brand-accent shadow-inner"><FileText size={24} /></div>
@@ -584,11 +584,11 @@ export default function UploaderDashboard({ navigate }) {
                 <button onClick={() => setPreviewDoc(null)} className="p-2 hover:bg-brand-800 rounded-full transition-colors text-slate-500 hover:text-white"><XCircle size={28} /></button>
               </div>
 
-              <div className="flex-1 flex flex-col lg:flex-row p-8 gap-8 overflow-hidden">
-                <div className="flex-[3] bg-black rounded-2xl border border-brand-800 overflow-hidden relative shadow-2xl">
+              <div className="flex-1 flex flex-col lg:flex-row p-4 md:p-8 gap-4 md:gap-8 overflow-hidden">
+                <div className="flex-[3] bg-black rounded-2xl border border-brand-800 overflow-hidden relative shadow-2xl min-h-[250px] md:min-h-0">
                   {previewDoc.loading ? <div className="absolute inset-0 flex items-center justify-center"><div className="w-10 h-10 border-4 border-brand-accent border-t-transparent rounded-full animate-spin" /></div> : <iframe src={`${previewDoc.s3_url}#toolbar=0`} className="w-full h-full" />}
                 </div>
-                <div className="flex-1 space-y-6 overflow-y-auto custom-scrollbar">
+                <div className="flex-1 space-y-4 md:space-y-6 overflow-y-auto custom-scrollbar max-h-[40vh] lg:max-h-none">
                   {previewDoc.uploader_message && (
                     <div className="p-6 bg-rose-500/5 border border-rose-500/10 rounded-2xl">
                       <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">

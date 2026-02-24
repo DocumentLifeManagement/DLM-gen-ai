@@ -195,7 +195,7 @@ export default function ApproverDashboard({ navigate }) {
     <DashboardLayout role={userRole} navigate={navigate} title="Approver Dashboard">
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
         <StatCard title="Total Documents" value={total} icon={FileText} color="text-brand-accent" />
         <StatCard title="Pending Approval" value={pending} icon={Clock} color="text-orange-400" />
         <StatCard title="Approved" value={approved} icon={CheckCircle} color="text-green-400" />

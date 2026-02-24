@@ -205,25 +205,25 @@ export default function ReviewDocument({ navigate, id }) {
       <div className="max-w-[1600px] mx-auto flex flex-col gap-6">
 
         {/* Row 1: Top Navigation & Summary */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-brand-900/50 p-6 rounded-2xl border border-brand-800 shadow-xl">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4 bg-brand-900/50 p-4 md:p-6 rounded-2xl border border-brand-800 shadow-xl">
+          <div className="flex items-start gap-3">
             <button
               onClick={() => navigate(`/${userRole}`)}
-              className="p-3 bg-brand-800 hover:bg-brand-700 rounded-xl text-slate-400 hover:text-white transition-all border border-brand-700"
+              className="p-2 md:p-3 bg-brand-800 hover:bg-brand-700 rounded-xl text-slate-400 hover:text-white transition-all border border-brand-700 shrink-0"
             >
               <ChevronLeft size={20} />
             </button>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h2 className="text-xl font-black text-white tracking-tight">{documentData.filename}</h2>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h2 className="text-base md:text-xl font-black text-white tracking-tight truncate">{documentData.filename}</h2>
                 <span className={clsx(
-                  "text-[9px] px-2 py-0.5 rounded-full border uppercase font-black tracking-widest",
+                  "text-[9px] px-2 py-0.5 rounded-full border uppercase font-black tracking-widest whitespace-nowrap",
                   documentData.status === 'REVIEW_PENDING' ? "border-orange-500/30 text-orange-400 bg-orange-500/5" : "border-brand-700 text-slate-500"
                 )}>
                   {documentData.status.replace("_", " ")}
                 </span>
               </div>
-              <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex flex-wrap items-center gap-2 md:gap-6">
                 <div className="flex items-center gap-3">
                   <div className="w-20 bg-brand-800 h-1.5 rounded-full overflow-hidden">
                     <div className="bg-brand-accent h-full" style={{ width: `${avgConfidence}%` }} />
@@ -232,43 +232,35 @@ export default function ReviewDocument({ navigate, id }) {
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1 bg-brand-950 rounded-lg border border-brand-800">
                   <AlertCircle size={10} className={documentData.risk_score > 3 ? "text-red-400" : "text-emerald-400"} />
-                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Stability Index: {10 - documentData.risk_score}/10</span>
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Stability: {10 - documentData.risk_score}/10</span>
                 </div>
-                {documentData.created_at && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 bg-brand-950 rounded-lg border border-brand-800">
-                    <Clock size={10} className="text-slate-500" />
-                    <span className="text-[9px] font-mono text-slate-500">
-                      {new Date(documentData.created_at).toLocaleDateString()} · {new Date(documentData.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="outline"
-              className="!border-red-500/20 !text-red-400 hover:!bg-red-500/10 !py-3 !px-6 text-xs uppercase font-bold tracking-widest"
+              className="!border-red-500/20 !text-red-400 hover:!bg-red-500/10 !py-2 !px-4 text-xs uppercase font-bold tracking-widest"
               onClick={() => setShowRejectModal(true)}
             >
-              <Trash2 size={16} className="mr-2" />
+              <Trash2 size={14} className="mr-1.5" />
               Discard / Transfer
             </Button>
             <Button
               variant="primary"
-              className="!py-3 !px-10 shadow-xl shadow-brand-accent/20 text-xs uppercase font-black tracking-widest"
+              className="!py-2 !px-6 shadow-xl shadow-brand-accent/20 text-xs uppercase font-black tracking-widest"
               onClick={() => handleDecision('APPROVE')}
               disabled={saving}
             >
-              <ShieldCheck size={18} className="mr-2" />
-              {saving ? "Processing" : (userRole === "approver" ? "Authorize Document" : "Verify & Forward")}
+              <ShieldCheck size={16} className="mr-1.5" />
+              {saving ? "Processing" : (userRole === "approver" ? "Authorize" : "Verify & Forward")}
             </Button>
           </div>
         </div>
 
-        {/* Row 2: Split View (Restricted to fixed height with scrolling) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[500px]">
+        {/* Row 2: Split View - stacks on mobile, side by side on large screens */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[400px] lg:h-[500px]">
 
           {/* Evidence Panel */}
           <div className="bg-brand-900 border border-brand-800 rounded-2xl flex flex-col shadow-2xl overflow-hidden group">

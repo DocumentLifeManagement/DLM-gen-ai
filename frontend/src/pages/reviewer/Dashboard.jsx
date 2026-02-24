@@ -178,18 +178,18 @@ export default function ReviewerDashboard({ navigate }) {
     <DashboardLayout role={userRole} navigate={navigate} title="Review Dashboard">
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
         <StatCard title="Total Documents" value={total} icon={FileText} color="text-brand-accent" />
         <StatCard title="Pending Review" value={pending} icon={Clock} color="text-yellow-400" />
         <StatCard title="Reviewed Today" value={reviewed} icon={CheckCircle} color="text-green-400" />
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-6 border-b border-brand-800 mb-6 font-mono">
+      <div className="flex items-center gap-4 border-b border-brand-800 mb-6 font-mono overflow-x-auto">
         <button
           onClick={() => { setActiveTab("active"); setPage(1); }}
           className={clsx(
-            "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative px-2",
+            "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative px-2 whitespace-nowrap shrink-0",
             activeTab === "active" ? "text-brand-accent" : "text-slate-600 hover:text-slate-400"
           )}
         >
@@ -199,7 +199,7 @@ export default function ReviewerDashboard({ navigate }) {
         <button
           onClick={() => { setActiveTab("rejected"); setPage(1); }}
           className={clsx(
-            "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative px-2 flex items-center gap-2",
+            "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative px-2 flex items-center gap-2 whitespace-nowrap shrink-0",
             activeTab === "rejected" ? "text-rose-500" : "text-slate-600 hover:text-slate-400"
           )}
         >

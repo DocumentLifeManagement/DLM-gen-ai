@@ -317,7 +317,7 @@ export default function AdminDashboard({ navigate, query }) {
         <BarChart3 size={18} className="text-brand-accent" />
         {activeTab === 'active' ? 'System Overview' : activeTab === 'bin' ? 'Bin Overview' : 'Archive Overview'}
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard
           title="Total Documents"
           value={total}
@@ -353,33 +353,33 @@ export default function AdminDashboard({ navigate, query }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 mb-6 border-b border-brand-800">
+      <div className="flex flex-wrap gap-1 mb-6 border-b border-brand-800 overflow-x-auto">
         <button
           onClick={() => handleTabChange("active")}
-          className={`pb-3 px-4 text-sm font-medium transition-colors relative ${activeTab === 'active' ? 'text-brand-accent' : 'text-slate-400 hover:text-white'}`}
+          className={`pb-3 px-3 md:px-4 text-xs md:text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === 'active' ? 'text-brand-accent' : 'text-slate-400 hover:text-white'}`}
         >
-          <span className="flex items-center gap-2"><FileText size={16} /> Active Files</span>
+          <span className="flex items-center gap-1.5"><FileText size={14} /> Active Files</span>
           {activeTab === 'active' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(56,189,248,0.5)]"></div>}
         </button>
         <button
           onClick={() => handleTabChange("archived")}
-          className={`pb-3 px-4 text-sm font-medium transition-colors relative ${activeTab === 'archived' ? 'text-brand-accent' : 'text-slate-400 hover:text-white'}`}
+          className={`pb-3 px-3 md:px-4 text-xs md:text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === 'archived' ? 'text-brand-accent' : 'text-slate-400 hover:text-white'}`}
         >
-          <span className="flex items-center gap-2"><Archive size={16} /> Archived Files</span>
+          <span className="flex items-center gap-1.5"><Archive size={14} /> Archived</span>
           {activeTab === 'archived' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(56,189,248,0.5)]"></div>}
         </button>
         <button
           onClick={() => handleTabChange("bin")}
-          className={`pb-3 px-4 text-sm font-medium transition-colors relative ${activeTab === 'bin' ? 'text-brand-accent' : 'text-slate-400 hover:text-white'}`}
+          className={`pb-3 px-3 md:px-4 text-xs md:text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === 'bin' ? 'text-brand-accent' : 'text-slate-400 hover:text-white'}`}
         >
-          <span className="flex items-center gap-2"><Trash2 size={16} /> Bin</span>
+          <span className="flex items-center gap-1.5"><Trash2 size={14} /> Bin</span>
           {activeTab === 'bin' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(56,189,248,0.5)]"></div>}
         </button>
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-center">
-        <div className="relative flex-1 w-full md:max-w-md">
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
           <input
             type="text"
@@ -390,36 +390,37 @@ export default function AdminDashboard({ navigate, query }) {
           />
         </div>
 
-        <div className="flex gap-4 w-full md:w-auto items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           <button
             onClick={() => {
               setIsSelectionMode(!isSelectionMode);
               if (isSelectionMode) setSelectedIds([]);
             }}
             className={clsx(
-              "flex items-center gap-2 px-6 py-2.5 border rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg",
+              "flex items-center gap-2 px-4 py-2 border rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg",
               isSelectionMode
                 ? "bg-brand-accent text-white border-brand-accent"
                 : "bg-brand-900 border-brand-800 text-slate-400 hover:text-white"
             )}
           >
-            {isSelectionMode ? "Cancel Select" : "Delete Files"}
+            {isSelectionMode ? "Cancel" : "Delete Files"}
           </button>
 
           {isSelectionMode && selectedIds.length > 0 && (
             <button
               onClick={handleBulkAction}
-              className="flex items-center gap-2 px-6 py-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-[0_0_20px_rgba(244,63,94,0.1)] animate-in fade-in slide-in-from-left-4"
+              className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
             >
-              <Trash2 size={16} /> {activeTab === "bin" ? "Purge" : "Trash"} ({selectedIds.length})
+              <Trash2 size={14} /> {activeTab === "bin" ? "Purge" : "Trash"} ({selectedIds.length})
             </button>
           )}
-          <div className="relative flex-1 md:flex-none">
+
+          <div className="relative flex-1 min-w-[140px]">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full md:w-44 bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
+              className="w-full bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
             >
               <option value="ALL">All Status</option>
               <option value="SLA_BREACH">SLA Breaches</option>
@@ -432,12 +433,12 @@ export default function AdminDashboard({ navigate, query }) {
             </select>
           </div>
 
-          <div className="relative flex-1 md:flex-none">
+          <div className="relative flex-1 min-w-[130px]">
             <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="w-full md:w-40 bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
+              className="w-full bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
             >
               <option value="desc">Newest First</option>
               <option value="asc">Oldest First</option>
@@ -687,7 +688,7 @@ export default function AdminDashboard({ navigate, query }) {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 100, scale: 0.9 }}
             className={clsx(
-              "fixed bottom-8 right-8 px-8 py-5 rounded-2xl shadow-2xl z-[300] border-2 flex items-center gap-4",
+              "fixed bottom-4 right-4 md:bottom-8 md:right-8 px-5 md:px-8 py-4 md:py-5 rounded-2xl shadow-2xl z-[300] border-2 flex items-center gap-4 max-w-[calc(100vw-2rem)]",
               toast.type === 'error' ? 'bg-red-950 border-red-900 text-red-200' : 'bg-brand-900 border-brand-800 text-white'
             )}
           >

@@ -204,9 +204,9 @@ export default function UserManagement({ navigate }) {
 
     return (
         <DashboardLayout role={userRole} navigate={navigate} title="IAM & Security Control">
-            <div className="flex justify-between items-center mb-10">
-                <div>
-                    <h2 className="text-2xl font-black text-white tracking-tight mb-1">Fleet Personnel</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
+                <div className="min-w-0">
+                    <h2 className="text-xl md:text-2xl font-black text-white tracking-tight mb-1">Fleet Personnel</h2>
                     <p className="text-slate-500 text-sm">
                         Manage access rights and security clearances for all users.
                     </p>
@@ -217,28 +217,28 @@ export default function UserManagement({ navigate }) {
                         setEditingUser(null);
                     }}
                     className={clsx(
-                        "flex items-center gap-3 px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all",
+                        "flex items-center gap-3 px-5 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all whitespace-nowrap shrink-0",
                         showAddForm
                             ? "bg-slate-800 text-slate-400 hover:text-white"
                             : "bg-brand-accent text-white shadow-lg shadow-brand-accent/20 hover:scale-[1.02]"
                     )}
                 >
                     {showAddForm ? <XCircle size={16} /> : <UserPlus size={16} />}
-                    {showAddForm ? "Cancel Operation" : "Authorize New User"}
+                    {showAddForm ? "Cancel" : "Add User"}
                 </button>
             </div>
 
             {editingUser && (
                 <div className="mb-10">
-                    <div className="bg-brand-900 border border-brand-cyan/30 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                    <div className="bg-brand-900 border border-brand-cyan/30 rounded-2xl p-5 md:p-8 shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-brand-cyan/5 rounded-full blur-3xl -mr-16 -mt-16" />
                         <h3 className="text-xs font-black text-brand-cyan uppercase tracking-[0.3em] mb-6">
-                            Edit Operator Credentials: {editingUser.email}
+                            Edit: {editingUser.email}
                         </h3>
 
                         <form
                             onSubmit={handleUpdateUser}
-                            className="grid grid-cols-1 md:grid-cols-4 gap-8 items-end"
+                            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 md:gap-8 items-end"
                         >
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -326,7 +326,7 @@ export default function UserManagement({ navigate }) {
 
                         <form
                             onSubmit={handleAddUser}
-                            className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end"
+                            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 md:gap-6 items-end"
                         >
                             {/* Email */}
                             <div className="space-y-4">
@@ -423,79 +423,81 @@ export default function UserManagement({ navigate }) {
 
             {/* Users Table */}
             <div className="bg-brand-900 border border-brand-800 rounded-2xl overflow-hidden shadow-2xl">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="border-b border-brand-800 bg-brand-900/50">
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">User</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Security Level</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Status</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-brand-800/50">
-                        {users.map((user) => (
-                            <tr key={user.id} className="hover:bg-white/[0.02] transition-colors group">
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-brand-800 flex items-center justify-center text-brand-accent text-xs font-bold">
-                                            {user.email[0].toUpperCase()}
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm text-white font-medium">{user.full_name || "N/A"}</span>
-                                            <span className="text-[10px] text-slate-500 font-medium">{user.email}</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="text-[10px] font-black bg-brand-800 text-brand-accent px-2.5 py-1 rounded-md tracking-wider">
-                                        {user.role}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2">
-                                        {user.is_active ? (
-                                            <>
-                                                <CheckCircle size={14} className="text-emerald-500" />
-                                                <span className="text-xs text-emerald-500 font-bold uppercase tracking-wider">Active</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <XCircle size={14} className="text-rose-500" />
-                                                <span className="text-xs text-rose-500 font-bold uppercase tracking-wider">Inactive</span>
-                                            </>
-                                        )}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <button
-                                            onClick={() => startEditing(user)}
-                                            className="text-slate-500 hover:text-brand-cyan transition-colors p-2 rounded-lg hover:bg-brand-cyan/10"
-                                            title="Edit Credentials"
-                                        >
-                                            <Key size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteUser(user.id, user.email)}
-                                            className="text-slate-500 hover:text-rose-400 transition-colors p-2 rounded-lg hover:bg-rose-400/10"
-                                            title="Revoke Access"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </td>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[500px]">
+                        <thead>
+                            <tr className="border-b border-brand-800 bg-brand-900/50">
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">User</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Security Level</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Status</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
                             </tr>
-                        ))}
-                        {users.length === 0 && (
-                            <tr>
-                                <td colSpan="4" className="px-6 py-20 text-center">
-                                    <AlertCircle size={40} className="mx-auto text-slate-700 mb-4 opacity-20" />
-                                    <p className="text-slate-500 font-medium">No personnel detected in the current sector.</p>
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-brand-800/50">
+                            {users.map((user) => (
+                                <tr key={user.id} className="hover:bg-white/[0.02] transition-colors group">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-brand-800 flex items-center justify-center text-brand-accent text-xs font-bold">
+                                                {user.email[0].toUpperCase()}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-sm text-white font-medium">{user.full_name || "N/A"}</span>
+                                                <span className="text-[10px] text-slate-500 font-medium">{user.email}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="text-[10px] font-black bg-brand-800 text-brand-accent px-2.5 py-1 rounded-md tracking-wider">
+                                            {user.role}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            {user.is_active ? (
+                                                <>
+                                                    <CheckCircle size={14} className="text-emerald-500" />
+                                                    <span className="text-xs text-emerald-500 font-bold uppercase tracking-wider">Active</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <XCircle size={14} className="text-rose-500" />
+                                                    <span className="text-xs text-rose-500 font-bold uppercase tracking-wider">Inactive</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button
+                                                onClick={() => startEditing(user)}
+                                                className="text-slate-500 hover:text-brand-cyan transition-colors p-2 rounded-lg hover:bg-brand-cyan/10"
+                                                title="Edit Credentials"
+                                            >
+                                                <Key size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteUser(user.id, user.email)}
+                                                className="text-slate-500 hover:text-rose-400 transition-colors p-2 rounded-lg hover:bg-rose-400/10"
+                                                title="Revoke Access"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {users.length === 0 && (
+                                <tr>
+                                    <td colSpan="4" className="px-6 py-20 text-center">
+                                        <AlertCircle size={40} className="mx-auto text-slate-700 mb-4 opacity-20" />
+                                        <p className="text-slate-500 font-medium">No personnel detected in the current sector.</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Toast Notification */}

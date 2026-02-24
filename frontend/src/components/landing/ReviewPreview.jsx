@@ -17,7 +17,7 @@ export default function ReviewPreview() {
                 </p>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto h-[600px] lg:h-[500px]">
+            <div className="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto lg:h-[500px]">
                 {/* Document Viewer (Left) */}
                 <div className="flex-1 bg-brand-900 border border-brand-800 rounded-xl p-4 flex flex-col shadow-2xl relative overflow-hidden group">
                     <div className="bg-brand-950/50 p-2 rounded mb-4 flex justify-between items-center">
