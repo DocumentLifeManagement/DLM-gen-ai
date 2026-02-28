@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_04zpexq" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.44.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
+  <bpmn:process id="document_lifecycle" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_0xo0vy2</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Activity_1ykwtri" name="IDP and Data Extraction">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="extract-document" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0xo0vy2</bpmn:incoming>
+      <bpmn:outgoing>Flow_1jo19ta</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0xo0vy2" sourceRef="StartEvent_1" targetRef="Activity_1ykwtri" />
+    <bpmn:sequenceFlow id="Flow_1jo19ta" sourceRef="Activity_1ykwtri" targetRef="Activity_0axyoqp" />
+    <bpmn:sequenceFlow id="Flow_0hlss55" sourceRef="Activity_0axyoqp" targetRef="Activity_0akl843" />
+    <bpmn:exclusiveGateway id="Gateway_1x4hfy4" name="approved">
+      <bpmn:incoming>Flow_02upf75</bpmn:incoming>
+      <bpmn:outgoing>Flow_1mrpuzp</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0dc01kj</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_02upf75" sourceRef="Activity_0akl843" targetRef="Gateway_1x4hfy4" />
+    <bpmn:serviceTask id="Activity_1ukzhqq" name="Archive Document">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="archive-document" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1mrpuzp</bpmn:incoming>
+      <bpmn:outgoing>Flow_12mvpxv</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1mrpuzp" name="YES" sourceRef="Gateway_1x4hfy4" targetRef="Activity_1ukzhqq">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=approved = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Activity_1bhizsy" name="Archive Document Rejected">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="archive-rejected" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0dc01kj</bpmn:incoming>
+      <bpmn:outgoing>Flow_0fzuins</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0dc01kj" name="NO" sourceRef="Gateway_1x4hfy4" targetRef="Activity_1bhizsy">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=approved = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:endEvent id="Event_1d008mt" name="END">
+      <bpmn:incoming>Flow_12mvpxv</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_12mvpxv" sourceRef="Activity_1ukzhqq" targetRef="Event_1d008mt" />
+    <bpmn:endEvent id="Event_19wx25c" name="END">
+      <bpmn:incoming>Flow_0fzuins</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0fzuins" sourceRef="Activity_1bhizsy" targetRef="Event_19wx25c" />
+    <bpmn:receiveTask id="Activity_0axyoqp" name="Review Extracted Data" messageRef="Message_2ubusna">
+      <bpmn:incoming>Flow_1jo19ta</bpmn:incoming>
+      <bpmn:outgoing>Flow_0hlss55</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:receiveTask id="Activity_0akl843" name="Approve/Reject Document" messageRef="Message_0jpsrtu">
+      <bpmn:incoming>Flow_0hlss55</bpmn:incoming>
+      <bpmn:outgoing>Flow_02upf75</bpmn:outgoing>
+    </bpmn:receiveTask>
+  </bpmn:process>
+  <bpmn:message id="Message_2ubusna" name="Message_Review_Done">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=string(document_id)" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_0jpsrtu" name="Message_Approval_Done">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=string(document_id)" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="document_lifecycle">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="242" y="62" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1ykwtri_di" bpmnElement="Activity_1ykwtri">
+        <dc:Bounds x="210" y="140" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1x4hfy4_di" bpmnElement="Gateway_1x4hfy4" isMarkerVisible="true">
+        <dc:Bounds x="235" y="515" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="159" y="530" width="46" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1ukzhqq_di" bpmnElement="Activity_1ukzhqq">
+        <dc:Bounds x="210" y="630" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0fg090p" bpmnElement="Activity_1bhizsy">
+        <dc:Bounds x="360" y="500" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1d008mt_di" bpmnElement="Event_1d008mt">
+        <dc:Bounds x="242" y="752" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="248" y="795" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_19wx25c_di" bpmnElement="Event_19wx25c">
+        <dc:Bounds x="512" y="522" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="518" y="565" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1quwjyb_di" bpmnElement="Activity_0axyoqp">
+        <dc:Bounds x="210" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1cs0h76_di" bpmnElement="Activity_0akl843">
+        <dc:Bounds x="210" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0xo0vy2_di" bpmnElement="Flow_0xo0vy2">
+        <di:waypoint x="260" y="98" />
+        <di:waypoint x="260" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1jo19ta_di" bpmnElement="Flow_1jo19ta">
+        <di:waypoint x="260" y="220" />
+        <di:waypoint x="260" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0hlss55_di" bpmnElement="Flow_0hlss55">
+        <di:waypoint x="260" y="350" />
+        <di:waypoint x="260" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02upf75_di" bpmnElement="Flow_02upf75">
+        <di:waypoint x="260" y="470" />
+        <di:waypoint x="260" y="515" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1mrpuzp_di" bpmnElement="Flow_1mrpuzp">
+        <di:waypoint x="260" y="565" />
+        <di:waypoint x="260" y="630" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="264" y="595" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0dc01kj_di" bpmnElement="Flow_0dc01kj">
+        <di:waypoint x="285" y="540" />
+        <di:waypoint x="360" y="540" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="314" y="522" width="17" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12mvpxv_di" bpmnElement="Flow_12mvpxv">
+        <di:waypoint x="260" y="710" />
+        <di:waypoint x="260" y="752" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0fzuins_di" bpmnElement="Flow_0fzuins">
+        <di:waypoint x="460" y="540" />
+        <di:waypoint x="512" y="540" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

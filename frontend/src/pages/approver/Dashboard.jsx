@@ -14,7 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
-  Clock
+  Clock,
 } from "lucide-react";
 
 export default function ApproverDashboard({ navigate }) {
@@ -47,20 +47,17 @@ export default function ApproverDashboard({ navigate }) {
       // In a real app, we might fetch all status and filter client side, or have a specific endpoint
       // For now fetching APPROVAL_PENDING as per original code, but to show more stats we might want all.
       // Let's assume for now we want to see everything relevant to approver.
-      // If the API only returns pending, stats might be skewed. 
+      // If the API only returns pending, stats might be skewed.
       // I'll stick to the original endpoint but maybe we need a different one for history?
       // For this redesign, I will assume the endpoint returns what we need or I'll just use what's there.
       // The original code used `?status=APPROVAL_PENDING`. I will remove that filter to potentially get more history if allowed,
       // or keep it if that's the only data available. To show "Approved Today", we need history.
       // I'll try fetching all documents to populate the dashboard properly.
-      const res = await fetch(
-        "http://localhost:8000/api/v1/documents",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await fetch("http://localhost:8000/api/v1/documents", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!res.ok) throw new Error("Failed to fetch documents");
 
@@ -76,7 +73,7 @@ export default function ApproverDashboard({ navigate }) {
   const applyFilters = () => {
     let temp = [...documents];
 
-    // Default to showing only pending if no filter selected? 
+    // Default to showing only pending if no filter selected?
     // Or just show all. Let's show all but maybe default filtering logic is fine.
 
     if (statusFilter !== "ALL") {
@@ -88,14 +85,14 @@ export default function ApproverDashboard({ navigate }) {
 
     if (search) {
       temp = temp.filter((doc) =>
-        doc.filename.toLowerCase().includes(search.toLowerCase())
+        doc.filename.toLowerCase().includes(search.toLowerCase()),
       );
     }
 
     temp.sort((a, b) =>
       sortOrder === "asc"
         ? new Date(a.created_at) - new Date(b.created_at)
-        : new Date(b.created_at) - new Date(a.created_at)
+        : new Date(b.created_at) - new Date(a.created_at),
     );
 
     setFilteredDocs(temp);
@@ -108,17 +105,16 @@ export default function ApproverDashboard({ navigate }) {
 
       // Optimistic update
       // setDocuments(documents.filter((doc) => doc.id !== id)); // Don't remove, just update status
-      setDocuments(docs => docs.map(d => d.id === id ? { ...d, status: "APPROVED" } : d));
-
-      await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/final-approve`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      setDocuments((docs) =>
+        docs.map((d) => (d.id === id ? { ...d, status: "APPROVED" } : d)),
       );
+
+      await fetch(`http://localhost:8000/api/v1/documents/${id}/approve`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       showToast("Document Approved Successfully");
     } catch {
@@ -132,17 +128,16 @@ export default function ApproverDashboard({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
 
-      setDocuments(docs => docs.map(d => d.id === id ? { ...d, status: "REJECTED" } : d));
-
-      await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/reject`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      setDocuments((docs) =>
+        docs.map((d) => (d.id === id ? { ...d, status: "REJECTED" } : d)),
       );
+
+      await fetch(`http://localhost:8000/api/v1/documents/${id}/reject`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       showToast("Document Rejected");
     } catch {
@@ -156,10 +151,7 @@ export default function ApproverDashboard({ navigate }) {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const paginatedDocs = filteredDocs.slice(
-    (page - 1) * limit,
-    page * limit
-  );
+  const paginatedDocs = filteredDocs.slice((page - 1) * limit, page * limit);
 
   const statusBadge = (status) => {
     const styles = {
@@ -168,28 +160,53 @@ export default function ApproverDashboard({ navigate }) {
       APPROVED: "bg-green-500/10 text-green-400 border-green-500/20",
       REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
     };
-    return styles[status] || "bg-slate-500/10 text-slate-400 border-slate-500/20";
+    return (
+      styles[status] || "bg-slate-500/10 text-slate-400 border-slate-500/20"
+    );
   };
 
   // Stats
   const total = documents.length;
-  const pending = documents.filter(d => d.status === "APPROVAL_PENDING" || d.status === "REVIEWED").length; // Assuming REVIEWED means ready for approval
-  const approved = documents.filter(d => d.status === "APPROVED").length;
+  const pending = documents.filter(
+    (d) => d.status === "APPROVAL_PENDING" || d.status === "REVIEWED",
+  ).length; // Assuming REVIEWED means ready for approval
+  const approved = documents.filter((d) => d.status === "APPROVED").length;
 
   return (
-    <DashboardLayout role={userRole} navigate={navigate} title="Approver Dashboard">
-
+    <DashboardLayout
+      role={userRole}
+      navigate={navigate}
+      title="Approver Dashboard"
+    >
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatCard title="Total Documents" value={total} icon={FileText} color="text-brand-accent" />
-        <StatCard title="Pending Approval" value={pending} icon={Clock} color="text-orange-400" />
-        <StatCard title="Approved" value={approved} icon={CheckCircle} color="text-green-400" />
+        <StatCard
+          title="Total Documents"
+          value={total}
+          icon={FileText}
+          color="text-brand-accent"
+        />
+        <StatCard
+          title="Pending Approval"
+          value={pending}
+          icon={Clock}
+          color="text-orange-400"
+        />
+        <StatCard
+          title="Approved"
+          value={approved}
+          icon={CheckCircle}
+          color="text-green-400"
+        />
       </div>
 
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-center">
         <div className="relative flex-1 w-full md:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+            size={18}
+          />
           <input
             type="text"
             placeholder="Search documents..."
@@ -201,7 +218,10 @@ export default function ApproverDashboard({ navigate }) {
 
         <div className="flex gap-4 w-full md:w-auto">
           <div className="relative flex-1 md:flex-none">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+            <Filter
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+              size={16}
+            />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -216,7 +236,10 @@ export default function ApproverDashboard({ navigate }) {
           </div>
 
           <div className="relative flex-1 md:flex-none">
-            <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+            <SlidersHorizontal
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+              size={16}
+            />
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
@@ -243,7 +266,10 @@ export default function ApproverDashboard({ navigate }) {
         {loading ? (
           <div className="p-8 space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-brand-800/30 animate-pulse rounded-lg" />
+              <div
+                key={i}
+                className="h-16 bg-brand-800/30 animate-pulse rounded-lg"
+              />
             ))}
           </div>
         ) : (
@@ -264,23 +290,36 @@ export default function ApproverDashboard({ navigate }) {
                       <FileText size={20} />
                     </div>
                     <div className="truncate">
-                      <p className="truncate text-sm md:text-base">{doc.filename}</p>
-                      <p className="md:hidden text-xs text-slate-500 mt-1">{new Date(doc.created_at).toLocaleDateString()}</p>
+                      <p className="truncate text-sm md:text-base">
+                        {doc.filename}
+                      </p>
+                      <p className="md:hidden text-xs text-slate-500 mt-1">
+                        {new Date(doc.created_at).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                   <div className="hidden md:block md:col-span-2 text-slate-400 text-sm">
                     {new Date(doc.created_at).toLocaleDateString()}
                   </div>
                   <div className="hidden md:block md:col-span-2 text-slate-500 text-xs font-mono">
-                    {new Date(doc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(doc.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
                   <div className="col-span-6 md:col-span-2 flex justify-center">
-                    <span className={`text-[9px] md:text-[10px] px-3 py-1 rounded-full border font-black uppercase tracking-tight whitespace-nowrap ${statusBadge(doc.status)}`}>
+                    <span
+                      className={`text-[9px] md:text-[10px] px-3 py-1 rounded-full border font-black uppercase tracking-tight whitespace-nowrap ${statusBadge(doc.status)}`}
+                    >
                       {doc.status ? doc.status.replace("_", " ") : "INGESTED"}
                     </span>
                   </div>
-                  <div className="col-span-6 md:col-span-2 flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                    {(doc.status === "APPROVAL_PENDING" || doc.status === "REVIEWED") && (
+                  <div
+                    className="col-span-6 md:col-span-2 flex justify-end gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {(doc.status === "APPROVAL_PENDING" ||
+                      doc.status === "REVIEWED") && (
                       <>
                         <button
                           onClick={(e) => handleApprove(doc.id, e)}
@@ -339,11 +378,12 @@ export default function ApproverDashboard({ navigate }) {
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-6 right-6 bg-brand-900 border border-brand-700 text-white px-4 py-3 rounded-lg shadow-2xl animate-in slide-in-from-bottom-5 z-50 flex items-center gap-3">
-          <div className={`w-2 h-2 rounded-full ${toast.includes("Rejected") || toast.includes("Failed") ? "bg-red-500" : "bg-green-500"}`} />
+          <div
+            className={`w-2 h-2 rounded-full ${toast.includes("Rejected") || toast.includes("Failed") ? "bg-red-500" : "bg-green-500"}`}
+          />
           {toast}
         </div>
       )}
-
     </DashboardLayout>
   );
 }

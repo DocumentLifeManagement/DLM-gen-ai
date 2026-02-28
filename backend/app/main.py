@@ -9,19 +9,29 @@ from app.core.scheduler import start_scheduler, scheduler
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import asyncio
+from app.core.camunda import zeebe_worker
+import app.workers.document_workers  # Load tasks
+
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(fastapi_app: FastAPI):
     # ---- Startup ----
     from app.core.database import engine, Base
-    import app.models # ensure all models are imported for metadata
+    from app import models # ensure all models are imported for metadata
     
     start_scheduler()
     logger.info("FastAPI app started and APScheduler is running.")
+    
+    if zeebe_worker:
+        fastapi_app.state.zeebe_task = asyncio.create_task(zeebe_worker.work())
+        logger.info("Zeebe worker started.")
     
     yield  # this is where your app runs
     
     # ---- Shutdown ----
     scheduler.shutdown(wait=False)
+    if zeebe_worker and hasattr(fastapi_app.state, 'zeebe_task'):
+        fastapi_app.state.zeebe_task.cancel()
     logger.info("APScheduler stopped. FastAPI app shutting down.")
 
 app = FastAPI(title="Document Lifecycle Backend", lifespan=lifespan)

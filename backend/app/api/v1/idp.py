@@ -90,16 +90,23 @@ async def upload_and_analyze(
     db.commit()
     db.refresh(doc)
     
-    job = start_textract_job(doc.id, S3_BUCKET, key)
-    doc.status = "PROCESSING"
-    db.commit()
+    # Start Camunda process instantly
+    from app.core.camunda import zeebe_client
+    if zeebe_client:
+        try:
+            await zeebe_client.run_process(bpmn_process_id="document_lifecycle", variables={"document_id": doc.id})
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to start workflow: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to start Camunda workflow: {e}")
+    else:
+        raise HTTPException(status_code=500, detail="Camunda Zeebe client not configured properly")
     
     return {
         "id": doc.id,
         "filename": doc.filename,
         "status": doc.status,
-        "created_at": doc.created_at.isoformat(),
-        "job_id": job.job_id
+        "created_at": doc.created_at.isoformat()
     }
 
 @router.get("/results/{job_id}")
