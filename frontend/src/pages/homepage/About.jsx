@@ -20,22 +20,20 @@ export default function About({ navigate }) {
         <div className="flex items-center gap-6">
           <button
             onClick={() => navigate("/")}
-            className={`transition ${
-              window.location.pathname === "/"
+            className={`transition ${window.location.pathname === "/"
                 ? "text-blue-600 font-semibold"
                 : "text-gray-600 dark:text-gray-300 hover:text-blue-600"
-            }`}
+              }`}
           >
             Home
           </button>
 
           <button
             onClick={() => navigate("/about")}
-            className={`transition ${
-              window.location.pathname === "/about"
+            className={`transition ${window.location.pathname === "/about"
                 ? "text-blue-600 font-semibold"
                 : "text-gray-600 dark:text-gray-300 hover:text-blue-600"
-            }`}
+              }`}
           >
             About
           </button>

@@ -32,7 +32,7 @@ export default function TechMetricsCTA() {
         <div className="bg-brand-950 text-white">
             {/* Metrics */}
             <Section id="metrics" className="border-t border-brand-800">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-brand-800">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                     {[
                         { value: 95, suffix: "%+", label: "Extraction Accuracy" },
                         { value: 60, suffix: "%", label: "Faster Approvals" },
@@ -54,8 +54,8 @@ export default function TechMetricsCTA() {
 
 
             {/* Final CTA */}
-            <Section className="text-center py-32">
-                <div className="max-w-4xl mx-auto bg-gradient-to-r from-brand-900 to-brand-800 rounded-3xl p-12 border border-brand-700 relative overflow-hidden">
+            <Section className="text-center py-16 md:py-32">
+                <div className="max-w-4xl mx-auto bg-gradient-to-r from-brand-900 to-brand-800 rounded-3xl p-8 md:p-12 border border-brand-700 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand-accent/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
                     <h2 className="text-3xl md:text-5xl font-bold mb-6 relative z-10">

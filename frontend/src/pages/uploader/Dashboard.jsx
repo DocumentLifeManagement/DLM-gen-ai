@@ -1,5 +1,28 @@
 import React, { useEffect, useState, useRef } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import clsx from "clsx";
+
+// Forced IST Formatter
+const formatIST = (date, type = "both") => {
+  if (!date) return "—";
+  try {
+    const d = new Date(date);
+    const options = {
+      timeZone: 'Asia/Kolkata',
+      hour12: true
+    };
+
+    if (type === "date") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+    } else if (type === "time") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, hour: '2-digit', minute: '2-digit' }).format(d);
+    }
+    return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d) + " IST";
+  } catch (e) {
+    return String(date);
+  }
+};
+
 import StatCard from "../../components/dashboard/StatCard";
 import Button from "../../components/landing/Button";
 import {
@@ -13,7 +36,13 @@ import {
   ShieldCheck,
   File,
   XCircle,
-  Clock
+  Clock,
+  Edit3,
+  Archive,
+  Zap,
+  Tag,
+  MessageSquare,
+  Search
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -27,22 +56,31 @@ export default function UploaderDashboard({ navigate }) {
   const [toast, setToast] = useState(null);
 
   // New Upload State
-  const [uploadQueue, setUploadQueue] = useState([]); // { file, id, status: 'pending'|'uploading'|'done'|'error', progress, tag }
+  const [uploadQueue, setUploadQueue] = useState([]);
   const [isDragActive, setIsDragActive] = useState(false);
-  const dropRef = useRef(null);
 
   // Modals
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("active");
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const limit = 20;
+  const docsSectionRef = useRef(null);
 
   useEffect(() => {
     fetchDocuments();
-    setupWebSocket();
   }, []);
 
-  const setupWebSocket = () => {
-    // WebSocket logic temporarily disabled until backend support is added
-    return () => { };
-  };
+  useEffect(() => {
+    // Scroll to documents if they exist after loading or tab change
+    if (!loading && filteredDocs.length > 0) {
+      setTimeout(() => {
+        docsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+  }, [loading, activeTab]);
 
   const fetchDocuments = async () => {
     try {
@@ -60,16 +98,15 @@ export default function UploaderDashboard({ navigate }) {
     }
   };
 
-  /* ----------------------------
-     UPLOAD LOGIC
-  -----------------------------*/
   const handleFilesSelected = (files) => {
     const newFiles = Array.from(files).map(file => ({
       file,
       id: Math.random().toString(36).substr(2, 9),
+      customName: file.name,
       status: 'pending',
       progress: 0,
-      tag: 'General' // Default tag
+      tag: 'General',
+      notes: ''
     }));
     setUploadQueue(prev => [...prev, ...newFiles]);
   };
@@ -91,13 +128,23 @@ export default function UploaderDashboard({ navigate }) {
 
       const formData = new FormData();
       formData.append("file", item.file);
-      // formData.append("tag", item.tag); // If backend supports it later
+      formData.append("custom_filename", item.customName);
+      formData.append("tag", item.tag);
+      if (item.notes) {
+        formData.append("notes", item.notes);
+      }
 
       try {
-        // Mock progress for visual effect since fetch doesn't support built-in progress events easily without XHR/Axios
+        // Smooth linear-ish progress increment
+        let currentProgress = 0;
         const interval = setInterval(() => {
-          updateFileStatus(item.id, { progress: Math.min(90, (Math.random() * 20) + 10) }); // increment
-        }, 200);
+          currentProgress += Math.random() * 2 + 1; // slow steady increase
+          if (currentProgress > 95) {
+            currentProgress = 95;
+            clearInterval(interval);
+          }
+          updateFileStatus(item.id, { progress: currentProgress });
+        }, 400);
 
         const res = await fetch("http://localhost:8000/api/v1/upload-and-analyze", {
           method: "POST",
@@ -112,17 +159,14 @@ export default function UploaderDashboard({ navigate }) {
         const newDoc = await res.json();
         setDocuments(prev => [newDoc, ...prev]);
         updateFileStatus(item.id, { status: 'done', progress: 100 });
-        showToast(`${item.file.name} uploaded successfully`);
+        showToast(`${item.customName} uploaded successfully`);
       } catch (err) {
         updateFileStatus(item.id, { status: 'error', progress: 0 });
-        showToast(`Failed to upload ${item.file.name}`);
+        showToast(`Failed to upload ${item.customName}`);
       }
     }
   };
 
-  /* ----------------------------
-     DRAG & DROP
-  -----------------------------*/
   const handleDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragActive(true); };
   const handleDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragActive(false); };
   const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
@@ -133,18 +177,44 @@ export default function UploaderDashboard({ navigate }) {
     }
   };
 
-  /* ----------------------------
-     DELETE
-  -----------------------------*/
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure?")) return;
     const token = localStorage.getItem("access_token");
-    await fetch(`http://localhost:8000/api/v1/documents/${id}/delete/`, {
+    await fetch(`http://localhost:8000/api/v1/documents/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
     setDocuments(documents.filter((doc) => doc.id !== id));
+    setSelectedIds(selectedIds.filter(sid => sid !== id));
     showToast("Document deleted");
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Move ${selectedIds.length} documents to bin?`)) return;
+    const token = localStorage.getItem("access_token");
+    try {
+      const res = await fetch("http://localhost:8000/api/v1/documents/bulk-delete", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ ids: selectedIds })
+      });
+      if (!res.ok) throw new Error("Bulk delete failed");
+      setDocuments(documents.filter(doc => !selectedIds.includes(doc.id)));
+      setSelectedIds([]);
+      setIsSelectionMode(false); // Reset selection mode
+      showToast(`${selectedIds.length} documents moved to bin`);
+    } catch (err) {
+      showToast(err.message);
+    }
   };
 
   const showToast = (msg) => {
@@ -176,32 +246,45 @@ export default function UploaderDashboard({ navigate }) {
       REVIEWED: "bg-orange-500/10 text-orange-400 border-orange-500/20",
       APPROVED: "bg-green-500/10 text-green-400 border-green-500/20",
       FAILED: "bg-red-500/10 text-red-400 border-red-500/20",
+      REJECTED: "bg-rose-500/10 text-rose-400 border-rose-500/20",
     };
     return styles[status] || "bg-slate-500/10 text-slate-400 border-slate-500/20";
   };
 
-  // Stats
+  const filteredDocs = documents.filter(d => {
+    const matchesSearch = (d.filename?.toLowerCase().includes(search.toLowerCase()) ||
+      d.id.toString().includes(search) ||
+      (d.tag && d.tag.toLowerCase().includes(search.toLowerCase())));
+
+    if (activeTab === "rejected") {
+      return matchesSearch && (d.status === "REJECTED" || d.status === "FAILED");
+    }
+    return matchesSearch && d.status !== "REJECTED" && d.status !== "FAILED";
+  });
+
+  const paginatedDocs = filteredDocs.slice(
+    (page - 1) * limit,
+    page * limit
+  );
+
+  const totalPages = Math.ceil(filteredDocs.length / limit);
+
   const total = documents.length;
   const processing = documents.filter(d => d.status === "PROCESSING").length;
-  const failed = documents.filter(d => d.status === "FAILED").length;
+  const failed = documents.filter(d => d.status === "FAILED" || d.status === "REJECTED").length;
   const pendingQueue = uploadQueue.filter(f => f.status === 'pending').length;
 
   return (
     <DashboardLayout role={userRole} navigate={navigate} title="Upload Center">
-
-      {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <StatCard title="My Uploads" value={total} icon={FileText} color="text-brand-accent" />
         <StatCard title="Processing" value={processing} icon={Clock} color="text-purple-400" />
         <StatCard title="Queue" value={pendingQueue} icon={UploadCloud} color="text-orange-400" />
-        <StatCard title="Failed" value={failed} icon={AlertCircle} color="text-red-400" />
+        <StatCard title="Rejected / Failed" value={failed} icon={AlertCircle} color="text-red-400" />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        {/* Left Column: Upload Zone & Queue */}
-        <div className="xl:col-span-2 space-y-8">
-
-          {/* Upload Zone */}
+      <div className="flex flex-col gap-10">
+        <div className="space-y-6">
           <motion.div
             layout
             className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all duration-300 group
@@ -212,118 +295,105 @@ export default function UploaderDashboard({ navigate }) {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <input
-              type="file"
-              multiple
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              onChange={(e) => handleFilesSelected(e.target.files)}
-            />
-
+            <input type="file" multiple className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => handleFilesSelected(e.target.files)} />
             <div className="w-20 h-20 bg-brand-800 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-accent group-hover:scale-110 transition-transform shadow-lg shadow-brand-950/50">
               <UploadCloud size={40} />
             </div>
-
-            <h3 className="text-xl font-bold text-white mb-2">Drag & Drop files here</h3>
-            <p className="text-slate-400 mb-6">or click to browse from your computer</p>
-
+            <h3 className="text-xl font-bold text-white mb-2">Drag & Drop Documents</h3>
+            <p className="text-slate-400 mb-6">Support for PDF, ZIP, and Images up to 500MB</p>
             <div className="flex gap-4 justify-center text-xs text-slate-500 font-mono">
-              <span className="bg-brand-900/50 px-3 py-1 rounded">PDF</span>
-              <span className="bg-brand-900/50 px-3 py-1 rounded">JPG</span>
-              <span className="bg-brand-900/50 px-3 py-1 rounded">PNG</span>
-              <span className="bg-brand-900/50 px-3 py-1 rounded">Max 10MB</span>
+              <span className="bg-brand-900/50 px-3 py-1 rounded border border-brand-800">PDF</span>
+              <span className="bg-brand-900/50 px-3 py-1 rounded border border-brand-800">ZIP</span>
+              <span className="bg-brand-900/50 px-3 py-1 rounded border border-brand-800">MAX 500MB</span>
             </div>
           </motion.div>
 
-          {/* Upload Queue */}
           <AnimatePresence>
             {uploadQueue.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="bg-brand-900 border border-brand-800 rounded-xl overflow-hidden shadow-xl"
-              >
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="bg-brand-900 border border-brand-800 rounded-2xl overflow-hidden shadow-2xl">
                 <div className="px-6 py-4 border-b border-brand-800 flex justify-between items-center bg-brand-950/30">
-                  <h3 className="font-semibold text-white flex items-center gap-2">
-                    <UploadCloud size={18} className="text-brand-accent" />
-                    Upload Queue
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <Zap size={14} className="text-brand-accent" /> Active Queue
                   </h3>
                   <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setUploadQueue([])}
-                      className="!py-1.5 !px-3 !text-xs"
-                    >
-                      Clear All
-                    </Button>
-                    <Button
-                      variant="primary"
-                      onClick={startUpload}
-                      disabled={!uploadQueue.some(f => f.status === 'pending')}
-                      className="!py-1.5 !px-3 !text-xs"
-                    >
-                      Start Upload
-                    </Button>
+                    <Button variant="outline" onClick={() => setUploadQueue([])} className="!py-1.5 !px-4 !text-[10px] font-black uppercase tracking-widest">Clear</Button>
+                    <Button variant="primary" onClick={startUpload} disabled={!uploadQueue.some(f => f.status === 'pending')} className="!py-1.5 !px-4 !text-[10px] font-black uppercase tracking-widest">Start Upload</Button>
                   </div>
                 </div>
 
-                <div className="max-h-80 overflow-y-auto p-4 space-y-3">
+                <div className="p-4 space-y-3">
                   {uploadQueue.map(item => (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="bg-brand-950/50 border border-brand-800 p-4 rounded-lg flex items-center gap-4 group"
-                    >
-                      <div className="w-10 h-10 rounded bg-brand-800 flex items-center justify-center text-slate-400 shrink-0">
-                        <File size={20} />
+                    <motion.div key={item.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="bg-brand-950/50 border border-brand-800 rounded-xl p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-brand-900 border border-brand-800 flex items-center justify-center text-slate-500">
+                          {item.file.name.endsWith('.zip') ? <Archive size={20} /> : <File size={20} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start mb-2 gap-4">
+                            {item.status === 'pending' ? (
+                              <div className="flex items-center gap-2 flex-1">
+                                <Edit3 size={14} className="text-brand-accent" />
+                                <input
+                                  type="text"
+                                  placeholder="Display Name"
+                                  value={item.customName}
+                                  onChange={(e) => updateFileStatus(item.id, { customName: e.target.value })}
+                                  className="bg-transparent border-b border-brand-800 text-white text-sm focus:border-brand-accent outline-none w-full font-bold"
+                                />
+                              </div>
+                            ) : <p className="text-sm font-bold text-white truncate">{item.customName}</p>}
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => removeFile(item.id)} className="text-slate-600 hover:text-rose-500 transition-colors"><X size={16} /></button>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center text-[10px] font-mono mb-2">
+                            <span className="text-slate-500 uppercase">{(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
+                            <div className="flex gap-4 items-center">
+                              {item.status === 'uploading' && <span className="text-brand-accent animate-pulse font-black italic">Est. {Math.max(2, Math.ceil(item.file.size / 800000))}s remaining</span>}
+                              <span className={`font-black uppercase tracking-widest ${item.status === 'done' ? 'text-emerald-500' : item.status === 'error' ? 'text-rose-500' : 'text-brand-accent'}`}>
+                                {item.status === 'pending' ? 'Standby' : item.status === 'uploading' ? 'Ingesting...' : item.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="w-full bg-brand-800/30 rounded-full h-1 overflow-hidden relative mb-3">
+                            <motion.div
+                              className={`h-full relative ${item.status === 'error' ? 'bg-rose-500' : item.status === 'done' ? 'bg-emerald-500' : 'bg-gradient-to-r from-brand-accent to-brand-cyan'}`}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${item.progress}%` }}
+                              transition={{ ease: "linear", duration: 0.4 }}
+                            >
+                              {item.status === 'uploading' && <motion.div className="absolute inset-0 bg-white/20" animate={{ x: ['-100%', '100%'] }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} />}
+                            </motion.div>
+                          </div>
+
+                          {/* Classification Tag & Notes Input */}
+                          {item.status === 'pending' && (
+                            <div className="space-y-2 mt-3">
+                              <div className="flex items-center gap-2">
+                                <Tag size={12} className="text-slate-500" />
+                                <input
+                                  type="text"
+                                  placeholder="Classification Tag (Legal, Invoice...)"
+                                  value={item.tag}
+                                  onChange={(e) => updateFileStatus(item.id, { tag: e.target.value })}
+                                  className="bg-brand-900 border border-brand-800 px-3 py-1.5 rounded text-[10px] text-white focus:border-brand-accent outline-none flex-1 font-mono uppercase tracking-widest"
+                                />
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <MessageSquare size={12} className="text-slate-500 mt-1" />
+                                <textarea
+                                  placeholder="Add an internal note or message (optional)..."
+                                  value={item.notes}
+                                  onChange={(e) => updateFileStatus(item.id, { notes: e.target.value })}
+                                  className="bg-brand-900 border border-brand-800 px-3 py-2 rounded text-[10px] text-white focus:border-brand-accent outline-none flex-1 font-sans resize-none h-12"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-1">
-                          <p className="font-medium text-white truncate text-sm">{item.file.name}</p>
-                          <button
-                            onClick={() => removeFile(item.id)}
-                            className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-
-                        <div className="flex justify-between items-center text-xs text-slate-500 mb-2">
-                          <span>{(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
-                          <span className={item.status === 'done' ? 'text-green-400' : item.status === 'error' ? 'text-red-400' : ''}>
-                            {item.status === 'pending' ? 'Ready' : item.status === 'uploading' ? 'Uploading...' : item.status}
-                          </span>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div className="w-full bg-brand-800/50 rounded-full h-1.5 overflow-hidden">
-                          <motion.div
-                            className={`h-full ${item.status === 'error' ? 'bg-red-500' : item.status === 'done' ? 'bg-green-500' : 'bg-brand-accent'}`}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${item.progress}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Tag Selection (Visual Only for now) */}
-                      {item.status === 'pending' && (
-                        <div className="hidden sm:block">
-                          <select
-                            className="bg-brand-900 border border-brand-700 text-xs text-slate-300 rounded px-2 py-1 focus:outline-none focus:border-brand-accent"
-                            value={item.tag}
-                            onChange={(e) => updateFileStatus(item.id, { tag: e.target.value })}
-                          >
-                            <option>General</option>
-                            <option>Invoice</option>
-                            <option>Contract</option>
-                            <option>Report</option>
-                          </select>
-                        </div>
-                      )}
                     </motion.div>
                   ))}
                 </div>
@@ -332,170 +402,228 @@ export default function UploaderDashboard({ navigate }) {
           </AnimatePresence>
         </div>
 
-        {/* Right Column: Recent Uploads */}
-        <div className="xl:col-span-1">
-          <div className="bg-brand-900 border border-brand-800 rounded-xl overflow-hidden shadow-xl h-full flex flex-col">
-            <div className="px-6 py-4 border-b border-brand-800 bg-brand-950/30">
-              <h3 className="font-semibold text-white">Recent Documents</h3>
+        <div ref={docsSectionRef} className="space-y-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-4">
+            <div className="flex items-center gap-6 border-b border-brand-800 w-full md:w-auto">
+              <button
+                onClick={() => {
+                  setActiveTab("active");
+                  setPage(1);
+                  setIsSelectionMode(false);
+                  setSelectedIds([]);
+                }}
+                className={clsx(
+                  "pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all relative px-2",
+                  activeTab === "active" ? "text-brand-accent" : "text-slate-600 hover:text-slate-400"
+                )}
+              >
+                Historical Archives
+                {activeTab === "active" && <motion.div layoutId="uploaderTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(var(--brand-accent-rgb),0.5)]" />}
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab("rejected");
+                  setPage(1);
+                  setIsSelectionMode(false);
+                  setSelectedIds([]);
+                }}
+                className={clsx(
+                  "pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all relative px-2 flex items-center gap-2",
+                  activeTab === "rejected" ? "text-rose-500" : "text-slate-600 hover:text-slate-400"
+                )}
+              >
+                Rejected Records
+                {failed > 0 && <span className="w-5 h-5 rounded-full bg-rose-500/20 text-rose-500 flex items-center justify-center text-[10px]">{failed}</span>}
+                {activeTab === "rejected" && <motion.div layoutId="uploaderTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" />}
+              </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2">
-              {documents.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-4 p-8">
-                  <div className="w-16 h-16 rounded-full bg-brand-800/50 flex items-center justify-center">
-                    <FileText size={24} className="opacity-50" />
-                  </div>
-                  <p>No documents found</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {documents.slice(0, 10).map((doc) => (
-                    <motion.div
-                      key={doc.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="p-3 rounded-lg bg-brand-950/50 hover:bg-brand-800/30 border border-transparent hover:border-brand-700/50 transition-all group"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-8 h-8 rounded bg-brand-800 flex items-center justify-center text-slate-400 shrink-0">
-                            <FileText size={16} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-white truncate" title={doc.filename}>{doc.filename}</p>
-                            <p className="text-[10px] text-slate-500">{new Date(doc.created_at).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleDelete(doc.id)}
-                          className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+            <div className="flex gap-4 items-center w-full md:w-auto">
+              <button
+                onClick={() => {
+                  setIsSelectionMode(!isSelectionMode);
+                  if (isSelectionMode) setSelectedIds([]);
+                }}
+                className={clsx(
+                  "flex items-center gap-2 px-4 py-2 border rounded-lg text-xs font-black uppercase tracking-widest transition-all shadow-lg",
+                  isSelectionMode
+                    ? "bg-brand-accent text-white border-brand-accent"
+                    : "bg-brand-800/40 text-slate-400 border-brand-800 hover:text-white"
+                )}
+              >
+                {isSelectionMode ? "Cancel Selection" : "Select Files"}
+              </button>
 
-                      <div className="flex items-center justify-between mt-2">
-                        <span className={`text-[10px] px-2 py-0.5 rounded border ${statusBadge(doc.status)}`}>
-                          {doc.status ? doc.status.replace("_", " ") : "INGESTED"}
-                        </span>
-                        <button
-                          onClick={() => handleOpenPreview(doc)}
-                          className="text-brand-accent hover:text-white text-xs flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Eye size={12} /> View
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+              {isSelectionMode && selectedIds.length > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-lg animate-in fade-in slide-in-from-left-4"
+                >
+                  <Trash2 size={14} /> Delete Selected ({selectedIds.length})
+                </button>
               )}
+              <div className="relative w-full md:w-64">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search archives..."
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  className="w-full bg-brand-900/50 border border-brand-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white outline-none focus:border-brand-accent transition-all"
+                />
+              </div>
             </div>
           </div>
-        </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            >
+              {paginatedDocs.map(doc => (
+                <motion.div
+                  key={doc.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  onClick={() => isSelectionMode && toggleSelect(doc.id)}
+                  className={clsx(
+                    "bg-brand-900 border rounded-xl p-5 hover:border-brand-accent/40 transition-all group relative overflow-hidden cursor-pointer",
+                    isSelectionMode && selectedIds.includes(doc.id) ? "border-brand-accent ring-1 ring-brand-accent bg-brand-accent/5" : "border-brand-800"
+                  )}
+                >
+                  {isSelectionMode && (
+                    <div className="absolute top-4 left-4 z-20 animate-in zoom-in-50 duration-200">
+                      <div className={clsx(
+                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                        selectedIds.includes(doc.id) ? "bg-brand-accent border-brand-accent" : "border-brand-800 bg-brand-950 group-hover:border-brand-600"
+                      )}>
+                        {selectedIds.includes(doc.id) && <CheckCircle size={12} className="text-white" />}
+                      </div>
+                    </div>
+                  )}
 
+                  <div className={clsx("flex justify-between items-start mb-4", isSelectionMode ? "pl-8" : "")}>
+                    <div className="w-10 h-10 rounded-lg bg-brand-950 flex items-center justify-center text-brand-accent border border-brand-800">
+                      {doc.status === "REJECTED" ? <AlertCircle size={20} className="text-rose-500" /> : (doc.filename.endsWith('.zip') ? <Archive size={20} /> : <FileText size={20} />)}
+                    </div>
+                    <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => handleOpenPreview(doc)} className="p-2 bg-brand-800 rounded-lg hover:text-brand-accent transition-colors"><Eye size={14} /></button>
+                    </div>
+                  </div>
+                  <p className="text-sm font-bold text-white mb-1 truncate pr-16" title={doc.filename}>{doc.filename}</p>
+
+                  {/* Display Tag in Listing */}
+                  {doc.tag && (
+                    <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-brand-cyan/5 border border-brand-cyan/10 rounded text-[9px] text-brand-cyan font-mono uppercase tracking-widest">
+                      <Tag size={8} /> {doc.tag}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between mt-4">
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded border tracking-widest uppercase ${statusBadge(doc.status)}`}>
+                      {doc.status.replace("_", " ")}
+                    </span>
+                    <span className="text-[9px] text-slate-600 font-mono italic">
+                      {formatIST(doc.created_at)}
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center gap-2 mt-8">
+              <button
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+                className="px-4 py-2 bg-brand-900 border border-brand-800 rounded-lg text-xs font-bold text-slate-400 hover:text-white disabled:opacity-50 transition-colors"
+              >
+                Previous
+              </button>
+              <div className="flex items-center px-4 text-xs font-mono text-slate-500">
+                Page {page} of {totalPages}
+              </div>
+              <button
+                disabled={page === totalPages}
+                onClick={() => setPage(page + 1)}
+                className="px-4 py-2 bg-brand-900 border border-brand-800 rounded-lg text-xs font-bold text-slate-400 hover:text-white disabled:opacity-50 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Preview Modal */}
       <AnimatePresence>
         {previewDoc && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setPreviewDoc(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-brand-900 border border-brand-800 rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] overflow-hidden flex flex-col"
-            >
-              <div className="px-6 py-4 border-b border-brand-800 flex justify-between items-center bg-brand-950">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-brand-800 flex items-center justify-center text-brand-accent shadow-inner">
-                    <FileText size={20} />
-                  </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-end md:items-center justify-center z-50 p-0 md:p-6" onClick={() => setPreviewDoc(null)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0, y: 50 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 50 }} onClick={e => e.stopPropagation()} className="bg-brand-900 border border-brand-800 rounded-t-3xl md:rounded-3xl w-full max-w-6xl h-[92vh] md:h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+              <div className="px-8 py-6 border-b border-brand-800 flex justify-between items-center bg-brand-950">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-brand-800 flex items-center justify-center text-brand-accent shadow-inner"><FileText size={24} /></div>
                   <div>
-                    <h3 className="text-lg font-bold text-white leading-tight">
-                      {previewDoc.filename}
-                    </h3>
-                    <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">System Identifier: {previewDoc.id}</p>
-                  </div>
-                </div>
-                <button onClick={() => setPreviewDoc(null)} className="p-2 hover:bg-white/5 rounded-full transition-colors text-slate-500 hover:text-white">
-                  <XCircle size={24} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-hidden flex flex-col lg:flex-row p-6 gap-6">
-                {/* PDF Side */}
-                <div className="flex-[3] bg-brand-950 rounded-xl border border-brand-800 overflow-hidden relative group">
-                  {previewDoc.loading ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-brand-950">
-                      <div className="w-8 h-8 border-2 border-brand-accent border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  ) : (
-                    <iframe
-                      src={`${previewDoc.s3_url}#toolbar=0`}
-                      className="w-full h-full border-none"
-                      title="Preview Content"
-                    />
-                  )}
-                </div>
-
-                {/* Info Side */}
-                <div className="flex-[2] space-y-6 overflow-y-auto pr-2 custom-scrollbar">
-                  <div className="space-y-4">
-                  </div>
-
-                  <div className="space-y-3">
-                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contextual Data</h4>
-                    <div className="space-y-2">
-                      {previewDoc.fields?.slice(0, 8).map((f, i) => (
-                        <div key={i} className="flex justify-between items-center p-2 rounded-lg bg-brand-950/40 border border-brand-800/50">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase">{f.key}</span>
-                          <span className="text-xs text-white max-w-[150px] truncate">{f.value}</span>
-                        </div>
-                      ))}
-                      {previewDoc.fields?.length > 8 && (
-                        <p className="text-[10px] text-center text-slate-600 italic">+ {previewDoc.fields.length - 8} more fields</p>
+                    <h3 className="text-xl font-black text-white">{previewDoc.filename}</h3>
+                    <div className="flex items-center gap-3">
+                      <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Node ID: {previewDoc.id}</p>
+                      {previewDoc.tag && (
+                        <span className="text-[10px] text-brand-cyan font-mono tracking-[0.2em] uppercase bg-brand-cyan/10 px-2 py-0.5 rounded border border-brand-cyan/20 flex items-center gap-1">
+                          <Tag size={10} /> {previewDoc.tag}
+                        </span>
                       )}
                     </div>
                   </div>
+                </div>
+                <button onClick={() => setPreviewDoc(null)} className="p-2 hover:bg-brand-800 rounded-full transition-colors text-slate-500 hover:text-white"><XCircle size={28} /></button>
+              </div>
 
-                  <div className="p-4 bg-brand-accent/5 border border-brand-accent/20 rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <ShieldCheck size={14} className="text-brand-accent" />
-                      <span className="text-[10px] font-bold text-white uppercase">System Status</span>
+              <div className="flex-1 flex flex-col lg:flex-row p-4 md:p-8 gap-4 md:gap-8 overflow-hidden">
+                <div className="flex-[3] bg-black rounded-2xl border border-brand-800 overflow-hidden relative shadow-2xl min-h-[250px] md:min-h-0">
+                  {previewDoc.loading ? <div className="absolute inset-0 flex items-center justify-center"><div className="w-10 h-10 border-4 border-brand-accent border-t-transparent rounded-full animate-spin" /></div> : <iframe src={`${previewDoc.s3_url}#toolbar=0`} className="w-full h-full" />}
+                </div>
+                <div className="flex-1 space-y-4 md:space-y-6 overflow-y-auto custom-scrollbar max-h-[40vh] lg:max-h-none">
+                  {previewDoc.uploader_message && (
+                    <div className="p-6 bg-rose-500/5 border border-rose-500/10 rounded-2xl">
+                      <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <MessageSquare size={14} /> Reviewer Feedback
+                      </h4>
+                      <div className="p-4 bg-brand-950/60 rounded-xl border border-rose-500/10 italic text-[11px] text-slate-300 leading-relaxed shadow-inner">
+                        "{previewDoc.uploader_message}"
+                      </div>
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      This document is currently in <span className="text-brand-accent font-bold">"{previewDoc.status}"</span> state.
-                      Further audits can be performed by the reviewer team.
-                    </p>
+                  )}
+
+                  <div className="p-6 bg-brand-accent/5 border border-brand-accent/10 rounded-2xl">
+                    <h4 className="text-[10px] font-black text-brand-accent uppercase tracking-[0.2em] mb-4 flex items-center gap-2"><ShieldCheck size={14} /> System Metadata</h4>
+                    <div className="space-y-4">
+                      {previewDoc.fields?.slice(0, 10).map((f, i) => (
+                        <div key={i} className="flex flex-col gap-1">
+                          <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{f.key}</span>
+                          <span className="text-xs text-white font-medium break-all">{f.value}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <div className="px-6 py-4 bg-brand-950 border-t border-brand-800 flex justify-end">
-                <Button variant="primary" onClick={() => setPreviewDoc(null)} className="!px-10">Done Viewing</Button>
+              <div className="p-8 bg-brand-950 border-t border-brand-800 flex justify-end">
+                <Button variant="primary" onClick={() => setPreviewDoc(null)} className="!px-12 !py-4 font-black uppercase text-xs tracking-[0.2em]">Close Preview</Button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Toast Notification */}
       {toast && (
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 50 }}
-          className="fixed bottom-6 right-6 bg-brand-900 border border-brand-700 text-white px-4 py-3 rounded-lg shadow-2xl z-50 flex items-center gap-3"
-        >
-          <div className="w-2 h-2 rounded-full bg-brand-accent" />
-          {toast}
+        <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }} className="fixed bottom-10 right-10 bg-brand-accent text-white px-8 py-5 rounded-2xl shadow-2xl z-50 font-black uppercase tracking-widest text-xs flex items-center gap-4">
+          <CheckCircle size={20} /> {toast}
         </motion.div>
       )}
     </DashboardLayout>

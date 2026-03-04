@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Body
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -27,15 +27,21 @@ async def _publish(message_name: str, document_id: int, variables: dict = {}):
 @router.post("/{document_id}/review")
 async def review_document(
     document_id: int,
+    payload: dict = Body(default={}),
     db: Session = Depends(get_db),
-    user=Depends(require_role(["REVIEWER"]))
+    user=Depends(require_role(["REVIEWER", "ADMIN"]))
 ):
     result = LifecycleService.transition(
         db=db,
         document_id=document_id,
         to_state="APPROVAL_PENDING",
         actor_type="USER",
-        actor_id=user["sub"]
+        actor_id=user["sub"],
+        actor_name=user.get("name"),
+        actor_email=user["sub"],
+        reviewer_notes=payload.get("notes"),
+        uploader_message=payload.get("uploader_message") or None,
+        bypass_rules=user.get("role") == "ADMIN"
     )
     # Unblock the "Review Extracted Data" Receive Task
     await _publish("Message_Review_Done", document_id)
@@ -46,15 +52,21 @@ async def review_document(
 @router.post("/{document_id}/approve")
 async def approve_document(
     document_id: int,
+    payload: dict = Body(default={}),
     db: Session = Depends(get_db),
-    user=Depends(require_role(["APPROVER"]))
+    user=Depends(require_role(["APPROVER", "ADMIN"]))
 ):
     result = LifecycleService.transition(
         db=db,
         document_id=document_id,
         to_state="APPROVED",
         actor_type="USER",
-        actor_id=user["sub"]
+        actor_id=user["sub"],
+        actor_name=user.get("name"),
+        actor_email=user["sub"],
+        approver_notes=payload.get("notes"),
+        digitally_signed=payload.get("digitally_signed", False),
+        bypass_rules=user.get("role") == "ADMIN"
     )
     # Unblock the "Approve/Reject" Receive Task with approved=true for the gateway
     await _publish("Message_Approval_Done", document_id, variables={"approved": True})
@@ -64,15 +76,21 @@ async def approve_document(
 @router.post("/{document_id}/reject")
 async def reject_document(
     document_id: int,
+    payload: dict = Body(default={}),
     db: Session = Depends(get_db),
-    user=Depends(require_role(["APPROVER", "REVIEWER"]))
+    user=Depends(require_role(["APPROVER", "REVIEWER", "ADMIN"]))
 ):
     result = LifecycleService.transition(
         db=db,
         document_id=document_id,
-        to_state="REJECTED",
+        to_state=to_state,
         actor_type="USER",
-        actor_id=user["sub"]
+        actor_id=user["sub"],
+        actor_name=user.get("name"),
+        actor_email=user["sub"],
+        approver_notes=payload.get("notes") if role in ("APPROVER", "ADMIN") else None,
+        reviewer_notes=payload.get("notes") if role == "REVIEWER" else None,
+        bypass_rules=role == "ADMIN"
     )
     # Unblock the "Approve/Reject" Receive Task with approved=false for the gateway
     await _publish("Message_Approval_Done", document_id, variables={"approved": False})

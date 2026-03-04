@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 import boto3
 import os
@@ -42,8 +42,17 @@ def get_document(document_id: int, db: Session = Depends(get_db)):
         "id": doc.id,
         "filename": doc.filename,
         "status": doc.status,
-        "created_at": doc.created_at.isoformat() if doc.created_at else None,
+        "tag": doc.tag,
+        "created_at": (doc.created_at.isoformat() + "Z") if doc.created_at else None,
         "s3_url": presigned_url, 
+        "reviewer_notes": doc.reviewer_notes,
+        "approver_notes": doc.approver_notes,
+        "uploader_notes": doc.uploader_notes,
+        "uploader_message": doc.uploader_message,
+        "risk_score": doc.risk_score,
+        "risk_indicators": doc.risk_indicators or [],
+        "digitally_signed_by": doc.digitally_signed_by,
+        "digitally_signed_at": (doc.digitally_signed_at.isoformat() + "Z") if doc.digitally_signed_at else None,
         "fields": [
             {
                 "id": kv.id,
@@ -72,7 +81,10 @@ def get_document_lifecycle(
             "to": h.to_state,
             "actor_type": h.actor_type,
             "actor_id": h.actor_id,
-            "timestamp": h.timestamp.isoformat() if h.timestamp else None,
+            "actor_name": h.actor_name,
+            "actor_email": h.actor_email,
+            "notes": h.notes,
+            "timestamp": (h.timestamp.isoformat() + "Z") if h.timestamp else None,
         }
         for h in history
     ]
@@ -102,9 +114,10 @@ def list_documents(
             "id": d.id,
             "filename": d.filename,
             "status": d.status,
-            "created_at": d.created_at.isoformat() if d.created_at else None,
-            "deleted_at": d.deleted_at.isoformat() if d.deleted_at else None,
-            "archived_at": d.archived_at.isoformat() if d.archived_at else None,
+            "tag": d.tag,
+            "created_at": (d.created_at.isoformat() + "Z") if d.created_at else None,
+            "deleted_at": (d.deleted_at.isoformat() + "Z") if d.deleted_at else None,
+            "archived_at": (d.archived_at.isoformat() + "Z") if d.archived_at else None,
         }
         for d in docs
     ]
@@ -138,7 +151,8 @@ def restore_document(document_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Document not found")
     
     doc.deleted_at = None
-    doc.archived_at = None # In case it was restored from archive too, or just to be safe
+    # If it was archived, it will stay in archived by having archived_at != None
+    # If it wasn't archived, it will go back to active as both are None.
     db.commit()
     return {"message": "Document restored successfully"}
 
@@ -150,7 +164,7 @@ def archive_document(document_id: int, db: Session = Depends(get_db)):
     
     from datetime import datetime
     doc.archived_at = datetime.utcnow()
-    # doc.status = "ARCHIVED" # Optional: changing status might be good for clarity
+    doc.status = "ARCHIVED"
     db.commit()
     return {"message": "Document archived successfully"}
 
@@ -173,6 +187,70 @@ def delete_document(document_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/bulk-delete")
+def bulk_delete_documents(payload: dict = Body(...), db: Session = Depends(get_db)):
+    doc_ids = payload.get("ids", [])
+    if not doc_ids:
+        return {"message": "No documents selected"}
+    
+    from datetime import datetime
+    now = datetime.utcnow()
+    db.query(Document).filter(Document.id.in_(doc_ids)).update(
+        {Document.deleted_at: now}, synchronize_session=False
+    )
+    db.commit()
+    return {"message": f"Successfully moved {len(doc_ids)} documents to bin"}
+
+@router.post("/bulk-purge")
+def bulk_purge_documents(payload: dict = Body(...), db: Session = Depends(get_db)):
+    doc_ids = payload.get("ids", [])
+    if not doc_ids:
+        return {"message": "No documents selected"}
+    
+    docs = db.query(Document).filter(Document.id.in_(doc_ids)).all()
+    purged_count = 0
+    
+    for doc in docs:
+        try:
+            # 1. DELETE FROM S3
+            try:
+                s3_client.delete_object(Bucket=doc.s3_bucket, Key=doc.s3_key)
+            except Exception as e:
+                print(f"S3 Delete Error for {doc.id}: {e}")
+
+            # 2. DELETE RELATED RECORDS
+            # Cleanup Tables and Cells
+            tables = db.query(Table).filter(Table.document_id == doc.id).all()
+            for t in tables:
+                db.query(TableCell).filter(TableCell.table_id == t.id).delete(synchronize_session=False)
+                db.delete(t)
+            
+            # Cleanup KeyValues
+            db.query(KeyValue).filter(KeyValue.document_id == doc.id).delete(synchronize_session=False)
+            
+            # Cleanup Textract Jobs and Raw Data
+            jobs = db.query(TextractJob).filter(TextractJob.document_id == doc.id).all()
+            for j in jobs:
+                db.query(TextractRaw).filter(TextractRaw.job_id == j.id).delete(synchronize_session=False)
+                db.delete(j)
+            
+            # Cleanup Lifecycle History
+            db.query(DocumentLifecycle).filter(DocumentLifecycle.document_id == doc.id).delete(synchronize_session=False)
+                
+            # Final Document Removal
+            db.delete(doc)
+            purged_count += 1
+        except Exception as e:
+            print(f"Error purging {doc.id}: {e}")
+            
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database commit failed: {str(e)}")
+        
+    return {"message": f"Permanently deleted {purged_count} documents"}
 
 @router.delete("/{document_id}/purge")
 def purge_document(document_id: int, db: Session = Depends(get_db)):

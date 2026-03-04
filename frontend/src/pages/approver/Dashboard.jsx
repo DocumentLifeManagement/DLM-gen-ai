@@ -1,5 +1,27 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+
+// Forced IST Formatter
+const formatIST = (date, type = "both") => {
+  if (!date) return "—";
+  try {
+    const d = new Date(date);
+    const options = {
+      timeZone: 'Asia/Kolkata',
+      hour12: true
+    };
+
+    if (type === "date") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+    } else if (type === "time") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, hour: '2-digit', minute: '2-digit' }).format(d);
+    }
+    return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d) + " IST";
+  } catch (e) {
+    return String(date);
+  }
+};
+
 import StatCard from "../../components/dashboard/StatCard";
 import Button from "../../components/landing/Button";
 import {
@@ -15,6 +37,7 @@ import {
   ChevronRight,
   SlidersHorizontal,
   Clock,
+  AlertCircle
 } from "lucide-react";
 
 export default function ApproverDashboard({ navigate }) {
@@ -43,21 +66,14 @@ export default function ApproverDashboard({ navigate }) {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem("access_token");
-
-      // In a real app, we might fetch all status and filter client side, or have a specific endpoint
-      // For now fetching APPROVAL_PENDING as per original code, but to show more stats we might want all.
-      // Let's assume for now we want to see everything relevant to approver.
-      // If the API only returns pending, stats might be skewed.
-      // I'll stick to the original endpoint but maybe we need a different one for history?
-      // For this redesign, I will assume the endpoint returns what we need or I'll just use what's there.
-      // The original code used `?status=APPROVAL_PENDING`. I will remove that filter to potentially get more history if allowed,
-      // or keep it if that's the only data available. To show "Approved Today", we need history.
-      // I'll try fetching all documents to populate the dashboard properly.
-      const res = await fetch("http://localhost:8000/api/v1/documents", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        "http://localhost:8000/api/v1/documents",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!res.ok) throw new Error("Failed to fetch documents");
 
@@ -73,19 +89,14 @@ export default function ApproverDashboard({ navigate }) {
   const applyFilters = () => {
     let temp = [...documents];
 
-    // Default to showing only pending if no filter selected?
-    // Or just show all. Let's show all but maybe default filtering logic is fine.
-
     if (statusFilter !== "ALL") {
       temp = temp.filter((doc) => doc.status === statusFilter);
-    } else {
-      // Optional: Maybe default to showing pending approvals at top or filtering irrelevant ones?
-      // For now, show all.
     }
 
     if (search) {
       temp = temp.filter((doc) =>
-        doc.filename.toLowerCase().includes(search.toLowerCase()),
+        doc.filename?.toLowerCase().includes(search.toLowerCase()) ||
+        doc.id?.toString().includes(search)
       );
     }
 
@@ -102,19 +113,22 @@ export default function ApproverDashboard({ navigate }) {
     e.stopPropagation();
     try {
       const token = localStorage.getItem("access_token");
+      setDocuments(docs => docs.map(d => d.id === id ? { ...d, status: "APPROVED" } : d));
 
-      // Optimistic update
-      // setDocuments(documents.filter((doc) => doc.id !== id)); // Don't remove, just update status
-      setDocuments((docs) =>
-        docs.map((d) => (d.id === id ? { ...d, status: "APPROVED" } : d)),
+      const res = await fetch(
+        `http://localhost:8000/api/v1/documents/${id}/approve`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
-      await fetch(`http://localhost:8000/api/v1/documents/${id}/approve`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || "Approval failed");
+      }
 
       showToast("Document Approved Successfully");
     } catch {
@@ -127,17 +141,22 @@ export default function ApproverDashboard({ navigate }) {
     e.stopPropagation();
     try {
       const token = localStorage.getItem("access_token");
+      setDocuments(docs => docs.map(d => d.id === id ? { ...d, status: "REJECTED" } : d));
 
-      setDocuments((docs) =>
-        docs.map((d) => (d.id === id ? { ...d, status: "REJECTED" } : d)),
+      const res = await fetch(
+        `http://localhost:8000/api/v1/documents/${id}/reject`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
-      await fetch(`http://localhost:8000/api/v1/documents/${id}/reject`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || "Rejection failed");
+      }
 
       showToast("Document Rejected");
     } catch {
@@ -155,7 +174,8 @@ export default function ApproverDashboard({ navigate }) {
 
   const statusBadge = (status) => {
     const styles = {
-      REVIEWED: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", // Pending Approval typically comes after Review
+      REVIEW_PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+      REVIEWED: "bg-orange-500/10 text-orange-400 border-orange-500/20",
       APPROVAL_PENDING: "bg-orange-500/10 text-orange-400 border-orange-500/20",
       APPROVED: "bg-green-500/10 text-green-400 border-green-500/20",
       REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
@@ -167,10 +187,8 @@ export default function ApproverDashboard({ navigate }) {
 
   // Stats
   const total = documents.length;
-  const pending = documents.filter(
-    (d) => d.status === "APPROVAL_PENDING" || d.status === "REVIEWED",
-  ).length; // Assuming REVIEWED means ready for approval
-  const approved = documents.filter((d) => d.status === "APPROVED").length;
+  const pending = documents.filter(d => d.status === "APPROVAL_PENDING" || d.status === "REVIEWED").length;
+  const approved = documents.filter(d => d.status === "APPROVED").length;
 
   return (
     <DashboardLayout
@@ -179,25 +197,10 @@ export default function ApproverDashboard({ navigate }) {
       title="Approver Dashboard"
     >
       {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatCard
-          title="Total Documents"
-          value={total}
-          icon={FileText}
-          color="text-brand-accent"
-        />
-        <StatCard
-          title="Pending Approval"
-          value={pending}
-          icon={Clock}
-          color="text-orange-400"
-        />
-        <StatCard
-          title="Approved"
-          value={approved}
-          icon={CheckCircle}
-          color="text-green-400"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
+        <StatCard title="Total Documents" value={total} icon={FileText} color="text-brand-accent" />
+        <StatCard title="Pending Approval" value={pending} icon={Clock} color="text-orange-400" />
+        <StatCard title="Approved" value={approved} icon={CheckCircle} color="text-green-400" />
       </div>
 
       {/* Controls */}
@@ -209,7 +212,7 @@ export default function ApproverDashboard({ navigate }) {
           />
           <input
             type="text"
-            placeholder="Search documents..."
+            placeholder="Search documents by name or ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-brand-accent transition-colors"
@@ -252,13 +255,21 @@ export default function ApproverDashboard({ navigate }) {
         </div>
       </div>
 
+      {error && (
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-500 text-sm font-bold">
+          <AlertCircle size={18} />
+          {error}
+        </div>
+      )}
+
       {/* Documents List */}
       <div className="bg-brand-900 border border-brand-800 rounded-xl overflow-hidden shadow-xl">
         {/* Header */}
         <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-brand-800 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-brand-950/50">
-          <div className="col-span-12 md:col-span-4">Document</div>
+          <div className="col-span-12 md:col-span-3">Document / ID</div>
           <div className="hidden md:block md:col-span-2">Date</div>
-          <div className="hidden md:block md:col-span-2">Time</div>
+          <div className="hidden md:block md:col-span-1 text-center">Time</div>
+          <div className="hidden md:block md:col-span-2 text-center">Risk Analysis</div>
           <div className="col-span-6 md:col-span-2 text-center">Status</div>
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
@@ -283,30 +294,44 @@ export default function ApproverDashboard({ navigate }) {
                 <div
                   key={doc.id}
                   className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-brand-800/30 transition-colors group cursor-pointer"
-                  onClick={() => navigate(`/approver/document/${doc.id}`)} // Assuming detail view exists or we can add it
+                  onClick={() => navigate(`/approver/document/${doc.id}`)}
                 >
-                  <div className="col-span-12 md:col-span-4 font-medium text-white flex items-center gap-4">
+                  <div className="col-span-12 md:col-span-3 font-medium text-white flex items-center gap-4">
                     <div className="w-10 h-10 rounded-lg bg-brand-800 flex items-center justify-center text-slate-400 shrink-0">
                       <FileText size={20} />
                     </div>
                     <div className="truncate">
-                      <p className="truncate text-sm md:text-base">
-                        {doc.filename}
-                      </p>
-                      <p className="md:hidden text-xs text-slate-500 mt-1">
-                        {new Date(doc.created_at).toLocaleDateString()}
-                      </p>
+                      <p className="truncate text-sm md:text-base text-white">{doc.filename}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-[10px] text-slate-500 font-mono">ID: {doc.id}</p>
+                        {doc.tag && (
+                          <span className="text-[8px] px-1.5 py-0.5 bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/20 rounded font-mono uppercase tracking-[0.1em]">
+                            {doc.tag}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="hidden md:block md:col-span-2 text-slate-400 text-sm">
-                    {new Date(doc.created_at).toLocaleDateString()}
+                  <div className="hidden md:block md:col-span-2 text-slate-400 text-xs">
+                    {formatIST(doc.created_at, "date")}
                   </div>
-                  <div className="hidden md:block md:col-span-2 text-slate-500 text-xs font-mono">
-                    {new Date(doc.created_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                  <div className="hidden md:block md:col-span-1 text-[10px] font-mono text-slate-500 text-center">
+                    {formatIST(doc.created_at, "time")}
                   </div>
+
+                  {/* Risk Analysis Pillar */}
+                  <div className="hidden md:block md:col-span-2 text-center">
+                    {doc.risk_indicators?.length > 0 ? (
+                      <span className="text-[9px] px-2 py-0.5 bg-red-500/10 text-red-500 rounded border border-red-500/20 font-bold">
+                        {doc.risk_indicators[0]}
+                      </span>
+                    ) : (
+                      <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20 font-bold uppercase tracking-tighter">
+                        Low Risk
+                      </span>
+                    )}
+                  </div>
+
                   <div className="col-span-6 md:col-span-2 flex justify-center">
                     <span
                       className={`text-[9px] md:text-[10px] px-3 py-1 rounded-full border font-black uppercase tracking-tight whitespace-nowrap ${statusBadge(doc.status)}`}
@@ -324,7 +349,7 @@ export default function ApproverDashboard({ navigate }) {
                         <button
                           onClick={(e) => handleApprove(doc.id, e)}
                           className="p-2 text-slate-400 hover:text-green-400 hover:bg-green-900/30 rounded-lg transition-colors"
-                          title="Approve"
+                          title="Quick Approve"
                         >
                           <Check size={18} />
                         </button>
@@ -333,14 +358,14 @@ export default function ApproverDashboard({ navigate }) {
                           className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
                           title="Reject"
                         >
-                          <X size={18} />
+                          <X size={18} strokeWidth={3} />
                         </button>
                       </>
                     )}
                     <button
-                      onClick={() => navigate(`/approver/document/${doc.id}`)} // Reuse review view or create approver specific?
+                      onClick={() => navigate(`/approver/document/${doc.id}`)}
                       className="p-2 text-slate-400 hover:text-white hover:bg-brand-800 rounded-lg transition-colors"
-                      title="View Details"
+                      title="Open Audit Workspace"
                     >
                       <Eye size={18} />
                     </button>

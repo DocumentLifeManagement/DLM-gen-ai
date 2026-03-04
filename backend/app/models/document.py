@@ -17,6 +17,17 @@ class Document(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True, default=None)   # soft-delete: non-null = in bin
     archived_at = Column(DateTime, nullable=True, default=None)  # archive: non-null = archived
+    tag = Column(String, nullable=True)                          # document classification tag
+    
+    # New Review/Approval fields
+    reviewer_notes = Column(Text, nullable=True)
+    approver_notes = Column(Text, nullable=True)
+    uploader_notes = Column(Text, nullable=True)  # notes from the document uploader
+    uploader_message = Column(Text, nullable=True)  # feedback message for the document uploader
+    risk_score = Column(Float, default=0.0)
+    risk_indicators = Column(JSON, nullable=True) # List of strings or Objects
+    digitally_signed_by = Column(String, nullable=True)
+    digitally_signed_at = Column(DateTime, nullable=True)
 
     jobs = relationship("TextractJob", back_populates="document")
 

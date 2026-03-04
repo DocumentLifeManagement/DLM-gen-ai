@@ -126,7 +126,7 @@ export default function HeroSection({ navigate }) {
                     transition={{ duration: 0.5, delay: 0.5 }} // Reduced delay for better UX
                     className="flex flex-col sm:flex-row gap-4 mb-32"
                 >
-                    <Button variant="primary" icon={ArrowRight} onClick={() => navigate('/login')}>
+                    <Button variant="primary" icon={ArrowRight} onClick={() => navigate('/register')}>
                         Sign Up
                     </Button>
                     <Button variant="secondary">Watch Demo</Button>

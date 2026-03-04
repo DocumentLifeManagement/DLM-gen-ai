@@ -2,15 +2,47 @@ import React, { useState } from "react";
 import LandingNavbar from "../../components/landing/LandingNavbar";
 import Button from "../../components/landing/Button";
 import Card from "../../components/landing/Card";
-import { Lock, Mail, ChevronLeft, AlertCircle } from "lucide-react";
-import { motion } from "framer-motion";
+import { Lock, Mail, ChevronLeft, AlertCircle, User } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Login({ navigate }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
+  const [demoUser, setDemoUser] = useState("");
+  const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleDemoSelection = (e) => {
+    const val = e.target.value;
+    setDemoUser(val);
+    if (val === "UPLOADER") {
+      setEmail("uploader@example.com");
+      setPassword("test123");
+      setRole("UPLOADER");
+      setFullName("Apurv");
+    }
+    else if (val === "REVIEWER") {
+      setEmail("reviewer@example.com");
+      setPassword("test123");
+      setRole("REVIEWER");
+      setFullName("Bhavesh");
+    }
+    else if (val === "APPROVER") {
+      setEmail("approver@example.com");
+      setPassword("test123");
+      setRole("APPROVER");
+      setFullName("Vishwas");
+    }
+    else if (val === "ADMIN") {
+      setEmail("admin@example.com");
+      setPassword("test123");
+      setRole("ADMIN");
+      setFullName("Kshitij");
+    }
+    else { setEmail(""); setPassword(""); setRole(""); setFullName(""); }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -41,6 +73,7 @@ export default function Login({ navigate }) {
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("token_type", data.token_type);
       localStorage.setItem("role", role.toLowerCase());
+      localStorage.setItem("full_name", data.full_name || "");
 
       if (role === "REVIEWER") navigate("/reviewer");
       else if (role === "UPLOADER") navigate("/uploader");
@@ -57,7 +90,7 @@ export default function Login({ navigate }) {
     <div className="min-h-screen bg-brand-950 flex flex-col font-sans text-slate-300">
       <LandingNavbar navigate={navigate} />
 
-      <div className="flex-1 flex items-center justify-center p-6 pt-32 relative overflow-hidden">
+      <div className="flex-1 flex items-center justify-center p-4 pt-24 relative overflow-hidden h-screen">
         {/* Background Gradients */}
         <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] bg-brand-accent/10 rounded-full blur-[150px] pointer-events-none" />
         <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-brand-cyan/10 rounded-full blur-[150px] pointer-events-none" />
@@ -68,24 +101,46 @@ export default function Login({ navigate }) {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <Card className="!p-8 md:!p-10 border-brand-800 bg-brand-900/60 backdrop-blur-xl">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-              <p className="text-slate-400 text-sm">Sign in to your DLM Agent account</p>
+          <Card className="!p-6 md:!p-8 border-brand-800 bg-brand-900/60 backdrop-blur-xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-white mb-1">Welcome Back</h1>
+              <p className="text-slate-400 text-xs">Sign in to your DLM Agent account</p>
             </div>
 
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-red-400 text-sm"
+                className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-red-400 text-xs"
               >
-                <AlertCircle size={18} />
+                <AlertCircle size={16} />
                 {error}
               </motion.div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-3">
+              <AnimatePresence>
+                {fullName && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="space-y-2"
+                  >
+                    <label className="block text-xs font-semibold uppercase text-slate-500">Full Name</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-accent" size={18} />
+                      <input
+                        type="text"
+                        readOnly
+                        className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 pl-10 pr-4 text-brand-accent font-bold focus:outline-none cursor-default"
+                        value={fullName}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div>
                 <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Email Address</label>
                 <div className="relative">
@@ -115,18 +170,18 @@ export default function Login({ navigate }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Select Role</label>
+                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Login As (Demo User)</label>
                 <div className="relative">
                   <select
                     className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-brand-accent transition-colors appearance-none"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
+                    value={demoUser}
+                    onChange={handleDemoSelection}
                   >
-                    <option value="">Choose a role...</option>
-                    <option value="ADMIN">Administrator</option>
+                    <option value="">Custom Login / Choose a profile...</option>
                     <option value="UPLOADER">Uploader</option>
                     <option value="REVIEWER">Reviewer</option>
                     <option value="APPROVER">Approver</option>
+                    <option value="ADMIN">Admin</option>
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -134,10 +189,34 @@ export default function Login({ navigate }) {
                 </div>
               </div>
 
+
+
+              {demoUser === "" && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Select Role manually</label>
+                  <div className="relative">
+                    <select
+                      className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-brand-accent transition-colors appearance-none"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                    >
+                      <option value="">Choose a role...</option>
+                      <option value="ADMIN">Administrator</option>
+                      <option value="UPLOADER">Uploader</option>
+                      <option value="REVIEWER">Reviewer</option>
+                      <option value="APPROVER">Approver</option>
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <Button
                 type="submit"
                 variant="primary"
-                className="w-full !py-3 !text-lg !font-semibold shadow-xl shadow-indigo-500/20"
+                className="w-full !py-2.5 !text-base !font-semibold shadow-xl shadow-indigo-500/20"
                 disabled={loading}
               >
                 {loading ? (
@@ -148,14 +227,15 @@ export default function Login({ navigate }) {
               </Button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-white/5 text-center">
-              <button onClick={() => navigate("/")} className="text-slate-500 hover:text-white transition-colors text-sm flex items-center justify-center gap-2 mx-auto">
-                <ChevronLeft size={16} /> Back to Home
+            <div className="mt-6 pt-4 border-t border-white/5 text-center flex flex-col items-center gap-2">
+              <span className="text-slate-400 text-xs">New to DLM Agent? <button onClick={() => navigate("/register")} className="text-brand-accent hover:text-white transition-colors font-medium">Create account</button></span>
+              <button onClick={() => navigate("/")} className="text-slate-500 hover:text-white transition-colors text-xs flex items-center justify-center gap-2 mt-1">
+                <ChevronLeft size={14} /> Back to Home
               </button>
             </div>
           </Card>
         </motion.div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

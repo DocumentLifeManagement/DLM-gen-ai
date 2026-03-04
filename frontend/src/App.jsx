@@ -3,6 +3,7 @@ import { useRouter } from "./router/useRouter";
 
 import Home from "./pages/homepage/Home";
 import Login from "./pages/homepage/Login";
+import Register from "./pages/homepage/Register";
 
 import AboutUs from "./pages/homepage/AboutUs";
 import ContactUs from "./pages/homepage/ContactUs";
@@ -18,10 +19,11 @@ import UserManagement from "./pages/admin/UserManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
-  const { currentPath, navigate, params } = useRouter();
+  const { currentPath, navigate, params, query } = useRouter();
 
   // role stored after login (mock RBAC)
-  const userRole = localStorage.getItem("role") || "uploader";
+  const userRole = localStorage.getItem("role");
+  const token = localStorage.getItem("access_token");
 
   /* ------------------------------
      Admin User Management
@@ -79,6 +81,9 @@ export default function App() {
     case "/login":
       return <Login navigate={navigate} />;
 
+    case "/register":
+      return <Register navigate={navigate} />;
+
     case "/about":
       return <AboutUs navigate={navigate} />;
 
@@ -125,7 +130,7 @@ export default function App() {
           allowedRoles={["admin"]}
           navigate={navigate}
         >
-          <AdminDashboard navigate={navigate} />
+          <AdminDashboard navigate={navigate} query={query} />
         </ProtectedRoute>
       );
 
