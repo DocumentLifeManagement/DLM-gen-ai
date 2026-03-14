@@ -54,7 +54,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
         
-    role = db.query(Role).filter(Role.name == "UPLOADER").first()
+    role = db.query(Role).filter(Role.name == "ADMIN").first()
     if not role:
         raise HTTPException(status_code=500, detail="Default role not found")
         
