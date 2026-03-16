@@ -2,47 +2,16 @@ import React, { useState } from "react";
 import LandingNavbar from "../../components/landing/LandingNavbar";
 import Button from "../../components/landing/Button";
 import Card from "../../components/landing/Card";
-import { Lock, Mail, ChevronLeft, AlertCircle, User } from "lucide-react";
+import { Lock, Mail, ChevronLeft, AlertCircle, User, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Login({ navigate }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
-  const [demoUser, setDemoUser] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const handleDemoSelection = (e) => {
-    const val = e.target.value;
-    setDemoUser(val);
-    if (val === "UPLOADER") {
-      setEmail("uploader@example.com");
-      setPassword("test123");
-      setRole("UPLOADER");
-      setFullName("Apurv");
-    }
-    else if (val === "REVIEWER") {
-      setEmail("reviewer@example.com");
-      setPassword("test123");
-      setRole("REVIEWER");
-      setFullName("Bhavesh");
-    }
-    else if (val === "APPROVER") {
-      setEmail("approver@example.com");
-      setPassword("test123");
-      setRole("APPROVER");
-      setFullName("Vishwas");
-    }
-    else if (val === "ADMIN") {
-      setEmail("admin@example.com");
-      setPassword("test123");
-      setRole("ADMIN");
-      setFullName("Kshitij");
-    }
-    else { setEmail(""); setPassword(""); setRole(""); setFullName(""); }
-  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -119,28 +88,6 @@ export default function Login({ navigate }) {
             )}
 
             <form onSubmit={handleLogin} className="space-y-3">
-              <AnimatePresence>
-                {fullName && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="space-y-2"
-                  >
-                    <label className="block text-xs font-semibold uppercase text-slate-500">Full Name</label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-accent" size={18} />
-                      <input
-                        type="text"
-                        readOnly
-                        className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 pl-10 pr-4 text-brand-accent font-bold focus:outline-none cursor-default"
-                        value={fullName}
-                      />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
               <div>
                 <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Email Address</label>
                 <div className="relative">
@@ -160,58 +107,41 @@ export default function Login({ navigate }) {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                   <input
-                    type="password"
-                    className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 pl-10 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-accent transition-colors"
+                    type={showPassword ? "text" : "password"}
+                    className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 pl-10 pr-12 text-white placeholder-slate-600 focus:outline-none focus:border-brand-accent transition-colors"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Login As (Demo User)</label>
+                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Role</label>
                 <div className="relative">
                   <select
                     className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-brand-accent transition-colors appearance-none"
-                    value={demoUser}
-                    onChange={handleDemoSelection}
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
                   >
-                    <option value="">Custom Login / Choose a profile...</option>
+                    <option value="">Choose a role...</option>
+                    <option value="ADMIN">Administrator</option>
                     <option value="UPLOADER">Uploader</option>
                     <option value="REVIEWER">Reviewer</option>
                     <option value="APPROVER">Approver</option>
-                    <option value="ADMIN">Admin</option>
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
               </div>
-
-
-
-              {demoUser === "" && (
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Select Role manually</label>
-                  <div className="relative">
-                    <select
-                      className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-brand-accent transition-colors appearance-none"
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                    >
-                      <option value="">Choose a role...</option>
-                      <option value="ADMIN">Administrator</option>
-                      <option value="UPLOADER">Uploader</option>
-                      <option value="REVIEWER">Reviewer</option>
-                      <option value="APPROVER">Approver</option>
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <Button
                 type="submit"

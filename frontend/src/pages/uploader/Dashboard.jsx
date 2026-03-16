@@ -99,7 +99,18 @@ export default function UploaderDashboard({ navigate }) {
   };
 
   const handleFilesSelected = (files) => {
-    const newFiles = Array.from(files).map(file => ({
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff', 'image/tif'];
+    const validFiles = Array.from(files).filter(file => {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const validExts = ['pdf', 'jpeg', 'jpg', 'png', 'tiff', 'tif'];
+      const isValid = validTypes.includes(file.type) || validExts.includes(ext);
+      if (!isValid) {
+        showToast(`Skipped ${file.name}: Unsupported format. Only PDF, JPEG, PNG, and TIFF are allowed.`);
+      }
+      return isValid;
+    });
+
+    const newFiles = validFiles.map(file => ({
       file,
       id: Math.random().toString(36).substr(2, 9),
       customName: file.name,
@@ -108,7 +119,10 @@ export default function UploaderDashboard({ navigate }) {
       tag: 'General',
       notes: ''
     }));
-    setUploadQueue(prev => [...prev, ...newFiles]);
+
+    if (newFiles.length > 0) {
+      setUploadQueue(prev => [...prev, ...newFiles]);
+    }
   };
 
   const updateFileStatus = (id, updates) => {
@@ -295,15 +309,15 @@ export default function UploaderDashboard({ navigate }) {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <input type="file" multiple className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => handleFilesSelected(e.target.files)} />
+            <input type="file" multiple accept=".pdf,.jpeg,.jpg,.png,.tiff,.tif" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => handleFilesSelected(e.target.files)} />
             <div className="w-20 h-20 bg-brand-800 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-accent group-hover:scale-110 transition-transform shadow-lg shadow-brand-950/50">
               <UploadCloud size={40} />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Drag & Drop Documents</h3>
-            <p className="text-slate-400 mb-6">Support for PDF, ZIP, and Images up to 500MB</p>
+            <p className="text-slate-400 mb-6">Support for PDF, JPEG, PNG, and TIFF up to 500MB</p>
             <div className="flex gap-4 justify-center text-xs text-slate-500 font-mono">
               <span className="bg-brand-900/50 px-3 py-1 rounded border border-brand-800">PDF</span>
-              <span className="bg-brand-900/50 px-3 py-1 rounded border border-brand-800">ZIP</span>
+              <span className="bg-brand-900/50 px-3 py-1 rounded border border-brand-800">IMAGE</span>
               <span className="bg-brand-900/50 px-3 py-1 rounded border border-brand-800">MAX 500MB</span>
             </div>
           </motion.div>
@@ -326,7 +340,7 @@ export default function UploaderDashboard({ navigate }) {
                     <motion.div key={item.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="bg-brand-950/50 border border-brand-800 rounded-xl p-4">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-lg bg-brand-900 border border-brand-800 flex items-center justify-center text-slate-500">
-                          {item.file.name.endsWith('.zip') ? <Archive size={20} /> : <File size={20} />}
+                          <File size={20} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-2 gap-4">
@@ -509,7 +523,7 @@ export default function UploaderDashboard({ navigate }) {
 
                   <div className={clsx("flex justify-between items-start mb-4", isSelectionMode ? "pl-8" : "")}>
                     <div className="w-10 h-10 rounded-lg bg-brand-950 flex items-center justify-center text-brand-accent border border-brand-800">
-                      {doc.status === "REJECTED" ? <AlertCircle size={20} className="text-rose-500" /> : (doc.filename.endsWith('.zip') ? <Archive size={20} /> : <FileText size={20} />)}
+                      {doc.status === "REJECTED" ? <AlertCircle size={20} className="text-rose-500" /> : <FileText size={20} />}
                     </div>
                     <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                       <button onClick={() => handleOpenPreview(doc)} className="p-2 bg-brand-800 rounded-lg hover:text-brand-accent transition-colors"><Eye size={14} /></button>
