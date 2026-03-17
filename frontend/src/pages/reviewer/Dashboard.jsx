@@ -87,9 +87,12 @@ export default function ReviewerDashboard({ navigate }) {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("http://localhost:8000/api/v1/documents", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        "https://dlm-gen-ai-production.up.railway.app/api/v1/documents",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (!res.ok) throw new Error("Failed to fetch documents");
 
@@ -148,7 +151,7 @@ export default function ReviewerDashboard({ navigate }) {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/review`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/review`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },

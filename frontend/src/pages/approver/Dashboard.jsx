@@ -84,11 +84,14 @@ export default function ApproverDashboard({ navigate }) {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("http://localhost:8000/api/v1/documents", {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const res = await fetch(
+        "https://dlm-gen-ai-production.up.railway.app/api/v1/documents",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       if (!res.ok) throw new Error("Failed to fetch documents");
 
@@ -134,7 +137,7 @@ export default function ApproverDashboard({ navigate }) {
       );
 
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/approve`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/approve`,
         {
           method: "POST",
           headers: {
@@ -164,7 +167,7 @@ export default function ApproverDashboard({ navigate }) {
       );
 
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/reject`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/reject`,
         {
           method: "POST",
           headers: {

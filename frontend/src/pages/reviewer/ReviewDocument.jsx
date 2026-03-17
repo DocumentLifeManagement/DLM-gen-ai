@@ -73,9 +73,12 @@ export default function ReviewDocument({ navigate, id }) {
   const fetchDocument = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://localhost:8000/api/v1/documents/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (!res.ok) throw new Error("Failed to fetch document details");
 
@@ -98,7 +101,7 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/lifecycle`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/lifecycle`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -129,7 +132,7 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/update-fields`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/update-fields`,
         {
           method: "PUT",
           headers: {
@@ -188,7 +191,7 @@ export default function ReviewDocument({ navigate, id }) {
       }
 
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${docId}/${endpoint}`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${docId}/${endpoint}`,
         {
           method: "POST",
           headers: {
@@ -218,7 +221,7 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `http://localhost:8000/api/v1/generate-summary/${id}`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/generate-summary/${id}`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },

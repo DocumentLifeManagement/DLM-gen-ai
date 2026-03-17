@@ -107,7 +107,7 @@ export default function AdminDashboard({ navigate, query }) {
 
       // Pass category based on activeTab
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents?category=${activeTab}`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents?category=${activeTab}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -182,10 +182,13 @@ export default function AdminDashboard({ navigate, query }) {
 
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://localhost:8000/api/v1/documents/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (!res.ok) throw new Error("Failed to delete");
       setDocuments((docs) => docs.filter((d) => d.id !== id));
@@ -207,7 +210,7 @@ export default function AdminDashboard({ navigate, query }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/purge`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/purge`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -229,7 +232,7 @@ export default function AdminDashboard({ navigate, query }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/restore`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/restore`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}` },
@@ -258,7 +261,7 @@ export default function AdminDashboard({ navigate, query }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/archive`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/archive`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}` },
@@ -306,7 +309,7 @@ export default function AdminDashboard({ navigate, query }) {
     const token = localStorage.getItem("access_token");
     try {
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${endpoint}`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${endpoint}`,
         {
           method: "POST",
           headers: {
