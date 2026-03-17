@@ -3,23 +3,40 @@ import DashboardLayout from "../../components/dashboard/DashboardLayout";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 
-
 // Forced IST Formatter
 const formatIST = (date, type = "both") => {
   if (!date) return "—";
   try {
     const d = new Date(date);
     const options = {
-      timeZone: 'Asia/Kolkata',
-      hour12: true
+      timeZone: "Asia/Kolkata",
+      hour12: true,
     };
 
     if (type === "date") {
-      return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+      return new Intl.DateTimeFormat("en-IN", {
+        ...options,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(d);
     } else if (type === "time") {
-      return new Intl.DateTimeFormat('en-IN', { ...options, hour: '2-digit', minute: '2-digit' }).format(d);
+      return new Intl.DateTimeFormat("en-IN", {
+        ...options,
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(d);
     }
-    return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d) + " IST";
+    return (
+      new Intl.DateTimeFormat("en-IN", {
+        ...options,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(d) + " IST"
+    );
   } catch (e) {
     return String(date);
   }
@@ -38,7 +55,7 @@ import {
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 
 export default function ReviewerDashboard({ navigate }) {
@@ -71,10 +88,10 @@ export default function ReviewerDashboard({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        "http://localhost:8000/api/v1/documents",
+        "https://dlm-gen-ai-production.up.railway.app/api/v1/documents",
         {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
 
       if (!res.ok) throw new Error("Failed to fetch documents");
@@ -92,25 +109,30 @@ export default function ReviewerDashboard({ navigate }) {
     let temp = [...documents];
 
     if (activeTab === "rejected") {
-      temp = temp.filter((doc) => doc.status === "REJECTED" || doc.status === "FAILED");
+      temp = temp.filter(
+        (doc) => doc.status === "REJECTED" || doc.status === "FAILED",
+      );
     } else {
-      temp = temp.filter((doc) => doc.status !== "REJECTED" && doc.status !== "FAILED");
+      temp = temp.filter(
+        (doc) => doc.status !== "REJECTED" && doc.status !== "FAILED",
+      );
       if (statusFilter !== "ALL") {
         temp = temp.filter((doc) => doc.status === statusFilter);
       }
     }
 
     if (search) {
-      temp = temp.filter((doc) =>
-        doc.filename?.toLowerCase().includes(search.toLowerCase()) ||
-        doc.id?.toString().includes(search)
+      temp = temp.filter(
+        (doc) =>
+          doc.filename?.toLowerCase().includes(search.toLowerCase()) ||
+          doc.id?.toString().includes(search),
       );
     }
 
     temp.sort((a, b) =>
       sortOrder === "asc"
         ? new Date(a.created_at) - new Date(b.created_at)
-        : new Date(b.created_at) - new Date(a.created_at)
+        : new Date(b.created_at) - new Date(a.created_at),
     );
 
     setFilteredDocs(temp);
@@ -123,17 +145,17 @@ export default function ReviewerDashboard({ navigate }) {
 
     // Optimistic update
     const updated = documents.map((doc) =>
-      doc.id === id ? { ...doc, status: "APPROVAL_PENDING" } : doc
+      doc.id === id ? { ...doc, status: "APPROVAL_PENDING" } : doc,
     );
     setDocuments(updated);
 
     try {
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/review`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/review`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` }
-        }
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
 
       if (!res.ok) throw new Error("Verification rejected by system");
@@ -151,10 +173,7 @@ export default function ReviewerDashboard({ navigate }) {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const paginatedDocs = filteredDocs.slice(
-    (page - 1) * limit,
-    page * limit
-  );
+  const paginatedDocs = filteredDocs.slice((page - 1) * limit, page * limit);
 
   const statusBadge = (status) => {
     const styles = {
@@ -166,52 +185,97 @@ export default function ReviewerDashboard({ navigate }) {
       REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
       FAILED: "bg-red-500/10 text-red-400 border-red-500/20",
     };
-    return styles[status] || "bg-slate-500/10 text-slate-400 border-slate-500/20";
+    return (
+      styles[status] || "bg-slate-500/10 text-slate-400 border-slate-500/20"
+    );
   };
 
   // Stats
   const total = documents.length;
-  const pending = documents.filter(d => d.status === "REVIEW_PENDING").length;
-  const reviewed = documents.filter(d => d.status === "REVIEWED" || d.status === "APPROVAL_PENDING").length;
+  const pending = documents.filter((d) => d.status === "REVIEW_PENDING").length;
+  const reviewed = documents.filter(
+    (d) => d.status === "REVIEWED" || d.status === "APPROVAL_PENDING",
+  ).length;
 
   return (
-    <DashboardLayout role={userRole} navigate={navigate} title="Review Dashboard">
-
+    <DashboardLayout
+      role={userRole}
+      navigate={navigate}
+      title="Review Dashboard"
+    >
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
-        <StatCard title="Total Documents" value={total} icon={FileText} color="text-brand-accent" />
-        <StatCard title="Pending Review" value={pending} icon={Clock} color="text-yellow-400" />
-        <StatCard title="Reviewed Today" value={reviewed} icon={CheckCircle} color="text-green-400" />
+        <StatCard
+          title="Total Documents"
+          value={total}
+          icon={FileText}
+          color="text-brand-accent"
+        />
+        <StatCard
+          title="Pending Review"
+          value={pending}
+          icon={Clock}
+          color="text-yellow-400"
+        />
+        <StatCard
+          title="Reviewed Today"
+          value={reviewed}
+          icon={CheckCircle}
+          color="text-green-400"
+        />
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-4 border-b border-brand-800 mb-6 font-mono overflow-x-auto">
         <button
-          onClick={() => { setActiveTab("active"); setPage(1); }}
+          onClick={() => {
+            setActiveTab("active");
+            setPage(1);
+          }}
           className={clsx(
             "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative px-2 whitespace-nowrap shrink-0",
-            activeTab === "active" ? "text-brand-accent" : "text-slate-600 hover:text-slate-400"
+            activeTab === "active"
+              ? "text-brand-accent"
+              : "text-slate-600 hover:text-slate-400",
           )}
         >
           Active Workload
-          {activeTab === "active" && <motion.div layoutId="reviewerActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent" />}
+          {activeTab === "active" && (
+            <motion.div
+              layoutId="reviewerActiveTab"
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent"
+            />
+          )}
         </button>
         <button
-          onClick={() => { setActiveTab("rejected"); setPage(1); }}
+          onClick={() => {
+            setActiveTab("rejected");
+            setPage(1);
+          }}
           className={clsx(
             "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative px-2 flex items-center gap-2 whitespace-nowrap shrink-0",
-            activeTab === "rejected" ? "text-rose-500" : "text-slate-600 hover:text-slate-400"
+            activeTab === "rejected"
+              ? "text-rose-500"
+              : "text-slate-600 hover:text-slate-400",
           )}
         >
           Rejected / Bin
-          {activeTab === "rejected" && <motion.div layoutId="reviewerActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500" />}
+          {activeTab === "rejected" && (
+            <motion.div
+              layoutId="reviewerActiveTab"
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500"
+            />
+          )}
         </button>
       </div>
 
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-center">
         <div className="relative flex-1 w-full md:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+            size={18}
+          />
           <input
             type="text"
             placeholder="Search documents by name or ID..."
@@ -224,7 +288,10 @@ export default function ReviewerDashboard({ navigate }) {
         <div className="flex gap-4 w-full md:w-auto">
           {activeTab === "active" && (
             <div className="relative flex-1 md:flex-none">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+              <Filter
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                size={16}
+              />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -239,7 +306,10 @@ export default function ReviewerDashboard({ navigate }) {
           )}
 
           <div className="relative flex-1 md:flex-none">
-            <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+            <SlidersHorizontal
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+              size={16}
+            />
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
@@ -259,7 +329,9 @@ export default function ReviewerDashboard({ navigate }) {
           <div className="col-span-12 md:col-span-3">Document / ID</div>
           <div className="hidden md:block md:col-span-2">Date</div>
           <div className="hidden md:block md:col-span-1 text-center">Time</div>
-          <div className="hidden md:block md:col-span-2 text-center">Risk Analysis</div>
+          <div className="hidden md:block md:col-span-2 text-center">
+            Risk Analysis
+          </div>
           <div className="col-span-6 md:col-span-2 text-center">Status</div>
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
@@ -267,7 +339,10 @@ export default function ReviewerDashboard({ navigate }) {
         {loading ? (
           <div className="p-8 space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-brand-800/30 animate-pulse rounded-lg" />
+              <div
+                key={i}
+                className="h-16 bg-brand-800/30 animate-pulse rounded-lg"
+              />
             ))}
           </div>
         ) : (
@@ -284,13 +359,19 @@ export default function ReviewerDashboard({ navigate }) {
                   onClick={() => navigate(`/reviewer/document/${doc.id}`)}
                 >
                   <div className="col-span-12 md:col-span-3 font-medium text-white flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${doc.status === 'NEEDS_REVIEW' ? 'bg-orange-500/10 text-orange-400' : 'bg-brand-800 text-slate-400'}`}>
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${doc.status === "NEEDS_REVIEW" ? "bg-orange-500/10 text-orange-400" : "bg-brand-800 text-slate-400"}`}
+                    >
                       <FileText size={20} />
                     </div>
                     <div className="truncate">
-                      <p className="truncate text-sm md:text-base text-white">{doc.filename}</p>
+                      <p className="truncate text-sm md:text-base text-white">
+                        {doc.filename}
+                      </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-[10px] text-slate-500 font-mono">ID: {doc.id}</p>
+                        <p className="text-[10px] text-slate-500 font-mono">
+                          ID: {doc.id}
+                        </p>
                         {doc.tag && (
                           <span className="text-[8px] px-1.5 py-0.5 bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/20 rounded font-mono uppercase tracking-[0.1em]">
                             {doc.tag}
@@ -323,11 +404,16 @@ export default function ReviewerDashboard({ navigate }) {
                   </div>
 
                   <div className="col-span-6 md:col-span-2 flex justify-center">
-                    <span className={`text-[9px] md:text-[10px] px-3 py-1 rounded-full border font-black uppercase tracking-tight whitespace-nowrap ${statusBadge(doc.status)}`}>
+                    <span
+                      className={`text-[9px] md:text-[10px] px-3 py-1 rounded-full border font-black uppercase tracking-tight whitespace-nowrap ${statusBadge(doc.status)}`}
+                    >
                       {doc.status ? doc.status.replace("_", " ") : "INGESTED"}
                     </span>
                   </div>
-                  <div className="col-span-6 md:col-span-2 flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="col-span-6 md:col-span-2 flex justify-end gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       onClick={() => navigate(`/reviewer/document/${doc.id}`)}
                       className="p-2 text-slate-400 hover:text-white hover:bg-brand-800 rounded-lg transition-colors"
@@ -382,7 +468,6 @@ export default function ReviewerDashboard({ navigate }) {
           {toast}
         </div>
       )}
-
     </DashboardLayout>
   );
 }

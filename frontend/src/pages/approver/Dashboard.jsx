@@ -7,16 +7,34 @@ const formatIST = (date, type = "both") => {
   try {
     const d = new Date(date);
     const options = {
-      timeZone: 'Asia/Kolkata',
-      hour12: true
+      timeZone: "Asia/Kolkata",
+      hour12: true,
     };
 
     if (type === "date") {
-      return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+      return new Intl.DateTimeFormat("en-IN", {
+        ...options,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(d);
     } else if (type === "time") {
-      return new Intl.DateTimeFormat('en-IN', { ...options, hour: '2-digit', minute: '2-digit' }).format(d);
+      return new Intl.DateTimeFormat("en-IN", {
+        ...options,
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(d);
     }
-    return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d) + " IST";
+    return (
+      new Intl.DateTimeFormat("en-IN", {
+        ...options,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(d) + " IST"
+    );
   } catch (e) {
     return String(date);
   }
@@ -37,7 +55,7 @@ import {
   ChevronRight,
   SlidersHorizontal,
   Clock,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 
 export default function ApproverDashboard({ navigate }) {
@@ -67,12 +85,12 @@ export default function ApproverDashboard({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        "http://localhost:8000/api/v1/documents",
+        "https://dlm-gen-ai-production.up.railway.app/api/v1/documents",
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!res.ok) throw new Error("Failed to fetch documents");
@@ -94,9 +112,10 @@ export default function ApproverDashboard({ navigate }) {
     }
 
     if (search) {
-      temp = temp.filter((doc) =>
-        doc.filename?.toLowerCase().includes(search.toLowerCase()) ||
-        doc.id?.toString().includes(search)
+      temp = temp.filter(
+        (doc) =>
+          doc.filename?.toLowerCase().includes(search.toLowerCase()) ||
+          doc.id?.toString().includes(search),
       );
     }
 
@@ -113,16 +132,18 @@ export default function ApproverDashboard({ navigate }) {
     e.stopPropagation();
     try {
       const token = localStorage.getItem("access_token");
-      setDocuments(docs => docs.map(d => d.id === id ? { ...d, status: "APPROVED" } : d));
+      setDocuments((docs) =>
+        docs.map((d) => (d.id === id ? { ...d, status: "APPROVED" } : d)),
+      );
 
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/approve`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/approve`,
         {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!res.ok) {
@@ -141,16 +162,18 @@ export default function ApproverDashboard({ navigate }) {
     e.stopPropagation();
     try {
       const token = localStorage.getItem("access_token");
-      setDocuments(docs => docs.map(d => d.id === id ? { ...d, status: "REJECTED" } : d));
+      setDocuments((docs) =>
+        docs.map((d) => (d.id === id ? { ...d, status: "REJECTED" } : d)),
+      );
 
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/reject`,
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/reject`,
         {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!res.ok) {
@@ -187,8 +210,10 @@ export default function ApproverDashboard({ navigate }) {
 
   // Stats
   const total = documents.length;
-  const pending = documents.filter(d => d.status === "APPROVAL_PENDING" || d.status === "REVIEWED").length;
-  const approved = documents.filter(d => d.status === "APPROVED").length;
+  const pending = documents.filter(
+    (d) => d.status === "APPROVAL_PENDING" || d.status === "REVIEWED",
+  ).length;
+  const approved = documents.filter((d) => d.status === "APPROVED").length;
 
   return (
     <DashboardLayout
@@ -198,9 +223,24 @@ export default function ApproverDashboard({ navigate }) {
     >
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
-        <StatCard title="Total Documents" value={total} icon={FileText} color="text-brand-accent" />
-        <StatCard title="Pending Approval" value={pending} icon={Clock} color="text-orange-400" />
-        <StatCard title="Approved" value={approved} icon={CheckCircle} color="text-green-400" />
+        <StatCard
+          title="Total Documents"
+          value={total}
+          icon={FileText}
+          color="text-brand-accent"
+        />
+        <StatCard
+          title="Pending Approval"
+          value={pending}
+          icon={Clock}
+          color="text-orange-400"
+        />
+        <StatCard
+          title="Approved"
+          value={approved}
+          icon={CheckCircle}
+          color="text-green-400"
+        />
       </div>
 
       {/* Controls */}
@@ -269,7 +309,9 @@ export default function ApproverDashboard({ navigate }) {
           <div className="col-span-12 md:col-span-3">Document / ID</div>
           <div className="hidden md:block md:col-span-2">Date</div>
           <div className="hidden md:block md:col-span-1 text-center">Time</div>
-          <div className="hidden md:block md:col-span-2 text-center">Risk Analysis</div>
+          <div className="hidden md:block md:col-span-2 text-center">
+            Risk Analysis
+          </div>
           <div className="col-span-6 md:col-span-2 text-center">Status</div>
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
@@ -301,9 +343,13 @@ export default function ApproverDashboard({ navigate }) {
                       <FileText size={20} />
                     </div>
                     <div className="truncate">
-                      <p className="truncate text-sm md:text-base text-white">{doc.filename}</p>
+                      <p className="truncate text-sm md:text-base text-white">
+                        {doc.filename}
+                      </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <p className="text-[10px] text-slate-500 font-mono">ID: {doc.id}</p>
+                        <p className="text-[10px] text-slate-500 font-mono">
+                          ID: {doc.id}
+                        </p>
                         {doc.tag && (
                           <span className="text-[8px] px-1.5 py-0.5 bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/20 rounded font-mono uppercase tracking-[0.1em]">
                             {doc.tag}

@@ -6,15 +6,17 @@ const formatIST = (dateStr) => {
   if (!dateStr) return "—";
   try {
     const date = new Date(dateStr);
-    return new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }).format(date) + " IST";
+    return (
+      new Intl.DateTimeFormat("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }).format(date) + " IST"
+    );
   } catch (e) {
     return dateStr;
   }
@@ -38,7 +40,7 @@ import {
   Clock,
   Activity,
   UserCheck,
-  Check
+  Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
@@ -67,16 +69,23 @@ export default function ReviewDocument({ navigate, id }) {
   const fetchDocument = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://localhost:8000/api/v1/documents/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (!res.ok) throw new Error("Failed to fetch document details");
 
       const data = await res.json();
       setDocumentData(data);
       setFields(data.fields || []);
-      setNotes(userRole === "approver" ? (data.approver_notes || "") : (data.reviewer_notes || ""));
+      setNotes(
+        userRole === "approver"
+          ? data.approver_notes || ""
+          : data.reviewer_notes || "",
+      );
       setIsDirty(false);
     } catch (err) {
       setError(err.message);
@@ -87,9 +96,12 @@ export default function ReviewDocument({ navigate, id }) {
     // Fetch lifecycle history
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://localhost:8000/api/v1/documents/${id}/lifecycle`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/lifecycle`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       if (res.ok) {
         const history = await res.json();
         setLifecycle(history);
@@ -115,14 +127,17 @@ export default function ReviewDocument({ navigate, id }) {
     setSaving(true);
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://localhost:8000/api/v1/documents/${id}/update-fields`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+      const res = await fetch(
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/update-fields`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ fields }),
         },
-        body: JSON.stringify({ fields }),
-      });
+      );
 
       if (!res.ok) throw new Error("Failed to update records");
 
@@ -138,7 +153,11 @@ export default function ReviewDocument({ navigate, id }) {
   };
 
   const handleDecision = async (decisionType) => {
-    if (decisionType === 'APPROVE' && userRole === "approver" && !digitallySigned) {
+    if (
+      decisionType === "APPROVE" &&
+      userRole === "approver" &&
+      !digitallySigned
+    ) {
       showToast("Digital signature required for final approval", "error");
       return;
     }
@@ -156,25 +175,28 @@ export default function ReviewDocument({ navigate, id }) {
       let endpoint = "review";
       let payload = { notes, uploader_message: uploaderMessage };
 
-      if (decisionType === 'APPROVE') {
+      if (decisionType === "APPROVE") {
         endpoint = userRole === "approver" ? "approve" : "review";
         payload.digitally_signed = digitallySigned;
-      } else if (decisionType === 'REJECT') {
+      } else if (decisionType === "REJECT") {
         endpoint = "reject";
         payload.to_state = "REJECTED";
-      } else if (decisionType === 'RETURN') {
+      } else if (decisionType === "RETURN") {
         endpoint = "reject";
         payload.to_state = "REVIEW_PENDING";
       }
 
-      const res = await fetch(`http://localhost:8000/api/v1/documents/${docId}/${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
+      const res = await fetch(
+        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${docId}/${endpoint}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload)
-      });
+      );
 
       if (!res.ok) throw new Error("Action failed");
 
@@ -188,22 +210,35 @@ export default function ReviewDocument({ navigate, id }) {
     }
   };
 
-  if (loading) return (
-    <DashboardLayout role={userRole} navigate={navigate} title="Secure Auditor">
-      <div className="flex flex-col items-center justify-center p-20">
-        <div className="w-12 h-12 border-2 border-brand-accent border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-slate-500 font-medium">Synchronizing document environment...</p>
-      </div>
-    </DashboardLayout>
-  );
+  if (loading)
+    return (
+      <DashboardLayout
+        role={userRole}
+        navigate={navigate}
+        title="Secure Auditor"
+      >
+        <div className="flex flex-col items-center justify-center p-20">
+          <div className="w-12 h-12 border-2 border-brand-accent border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-slate-500 font-medium">
+            Synchronizing document environment...
+          </p>
+        </div>
+      </DashboardLayout>
+    );
 
-  const avgConfidence = (fields.reduce((acc, f) => acc + (f.confidence || 0), 0) / (fields.length || 1) * 100).toFixed(1);
+  const avgConfidence = (
+    (fields.reduce((acc, f) => acc + (f.confidence || 0), 0) /
+      (fields.length || 1)) *
+    100
+  ).toFixed(1);
 
   return (
-    <DashboardLayout role={userRole} navigate={navigate} title="Audit Control Center">
-
+    <DashboardLayout
+      role={userRole}
+      navigate={navigate}
+      title="Audit Control Center"
+    >
       <div className="max-w-[1600px] mx-auto flex flex-col gap-6">
-
         {/* Row 1: Top Navigation & Summary */}
         <div className="flex flex-col gap-4 bg-brand-900/50 p-4 md:p-6 rounded-2xl border border-brand-800 shadow-xl">
           <div className="flex items-start gap-3">
@@ -215,24 +250,44 @@ export default function ReviewDocument({ navigate, id }) {
             </button>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h2 className="text-base md:text-xl font-black text-white tracking-tight truncate">{documentData.filename}</h2>
-                <span className={clsx(
-                  "text-[9px] px-2 py-0.5 rounded-full border uppercase font-black tracking-widest whitespace-nowrap",
-                  documentData.status === 'REVIEW_PENDING' ? "border-orange-500/30 text-orange-400 bg-orange-500/5" : "border-brand-700 text-slate-500"
-                )}>
+                <h2 className="text-base md:text-xl font-black text-white tracking-tight truncate">
+                  {documentData.filename}
+                </h2>
+                <span
+                  className={clsx(
+                    "text-[9px] px-2 py-0.5 rounded-full border uppercase font-black tracking-widest whitespace-nowrap",
+                    documentData.status === "REVIEW_PENDING"
+                      ? "border-orange-500/30 text-orange-400 bg-orange-500/5"
+                      : "border-brand-700 text-slate-500",
+                  )}
+                >
                   {documentData.status.replace("_", " ")}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2 md:gap-6">
                 <div className="flex items-center gap-3">
                   <div className="w-20 bg-brand-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-brand-accent h-full" style={{ width: `${avgConfidence}%` }} />
+                    <div
+                      className="bg-brand-accent h-full"
+                      style={{ width: `${avgConfidence}%` }}
+                    />
                   </div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{avgConfidence}% AI Match</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    {avgConfidence}% AI Match
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1 bg-brand-950 rounded-lg border border-brand-800">
-                  <AlertCircle size={10} className={documentData.risk_score > 3 ? "text-red-400" : "text-emerald-400"} />
-                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Stability: {10 - documentData.risk_score}/10</span>
+                  <AlertCircle
+                    size={10}
+                    className={
+                      documentData.risk_score > 3
+                        ? "text-red-400"
+                        : "text-emerald-400"
+                    }
+                  />
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">
+                    Stability: {10 - documentData.risk_score}/10
+                  </span>
                 </div>
               </div>
             </div>
@@ -250,26 +305,30 @@ export default function ReviewDocument({ navigate, id }) {
             <Button
               variant="primary"
               className="!py-2 !px-6 shadow-xl shadow-brand-accent/20 text-xs uppercase font-black tracking-widest"
-              onClick={() => handleDecision('APPROVE')}
+              onClick={() => handleDecision("APPROVE")}
               disabled={saving}
             >
               <ShieldCheck size={16} className="mr-1.5" />
-              {saving ? "Processing" : (userRole === "approver" ? "Authorize" : "Verify & Forward")}
+              {saving
+                ? "Processing"
+                : userRole === "approver"
+                  ? "Authorize"
+                  : "Verify & Forward"}
             </Button>
           </div>
         </div>
 
         {/* Row 2: Split View - stacks on mobile, side by side on large screens */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[400px] lg:h-[500px]">
-
           {/* Evidence Panel */}
           <div className="bg-brand-900 border border-brand-800 rounded-2xl flex flex-col shadow-2xl overflow-hidden group">
             <div className="px-5 py-3 border-b border-brand-800 flex justify-between items-center bg-brand-950/40">
               <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
-                <Activity size={12} className="text-brand-accent" /> Secure Visual Stream
+                <Activity size={12} className="text-brand-accent" /> Secure
+                Visual Stream
               </span>
               <button
-                onClick={() => window.open(documentData.s3_url, '_blank')}
+                onClick={() => window.open(documentData.s3_url, "_blank")}
                 className="p-1.5 hover:bg-brand-accent/10 rounded-lg text-slate-400 hover:text-brand-accent transition-all"
               >
                 <Maximize2 size={14} />
@@ -291,21 +350,35 @@ export default function ReviewDocument({ navigate, id }) {
                 onClick={() => setActiveTab("metadata")}
                 className={clsx(
                   "px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
-                  activeTab === "metadata" ? "text-brand-accent" : "text-slate-500 hover:text-slate-300"
+                  activeTab === "metadata"
+                    ? "text-brand-accent"
+                    : "text-slate-500 hover:text-slate-300",
                 )}
               >
                 Metadata Extraction
-                {activeTab === "metadata" && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(var(--brand-accent-rgb),0.8)]" />}
+                {activeTab === "metadata" && (
+                  <motion.div
+                    layoutId="tab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(var(--brand-accent-rgb),0.8)]"
+                  />
+                )}
               </button>
               <button
                 onClick={() => setActiveTab("audit")}
                 className={clsx(
                   "px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
-                  activeTab === "audit" ? "text-brand-accent" : "text-slate-500 hover:text-slate-300"
+                  activeTab === "audit"
+                    ? "text-brand-accent"
+                    : "text-slate-500 hover:text-slate-300",
                 )}
               >
                 Audit Trail
-                {activeTab === "audit" && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(var(--brand-accent-rgb),0.8)]" />}
+                {activeTab === "audit" && (
+                  <motion.div
+                    layoutId="tab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_10px_rgba(var(--brand-accent-rgb),0.8)]"
+                  />
+                )}
               </button>
             </div>
 
@@ -322,12 +395,18 @@ export default function ReviewDocument({ navigate, id }) {
                     {fields.map((field, idx) => (
                       <div key={idx} className="space-y-2 group">
                         <div className="flex justify-between items-center opacity-60 group-hover:opacity-100 transition-opacity">
-                          <label className="text-[9px] text-brand-accent font-black uppercase tracking-widest">{field.key}</label>
-                          <span className="text-[8px] text-slate-600 font-mono">{(field.confidence * 100).toFixed(0)}%</span>
+                          <label className="text-[9px] text-brand-accent font-black uppercase tracking-widest">
+                            {field.key}
+                          </label>
+                          <span className="text-[8px] text-slate-600 font-mono">
+                            {(field.confidence * 100).toFixed(0)}%
+                          </span>
                         </div>
                         <input
                           value={field.value}
-                          onChange={(e) => handleFieldChange(idx, e.target.value)}
+                          onChange={(e) =>
+                            handleFieldChange(idx, e.target.value)
+                          }
                           className="w-full bg-brand-950/30 border border-brand-800 hover:border-brand-700 focus:border-brand-accent py-2.5 px-4 rounded-xl text-xs text-white outline-none transition-all"
                         />
                       </div>
@@ -336,7 +415,9 @@ export default function ReviewDocument({ navigate, id }) {
                 ) : (
                   <motion.div
                     key="audit"
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
                     className="space-y-8"
                   >
                     {/* Risk Indicators */}
@@ -346,19 +427,31 @@ export default function ReviewDocument({ navigate, id }) {
                       </h4>
                       <div className="grid grid-cols-1 gap-2">
                         {documentData?.risk_indicators?.length > 0 ? (
-                          [...new Set(documentData.risk_indicators)].map((risk, i) => (
-                            <div key={i} className="flex flex-col justify-center p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-red-400">{risk}</span>
-                                <AlertCircle size={14} className="text-red-500/50" />
+                          [...new Set(documentData.risk_indicators)].map(
+                            (risk, i) => (
+                              <div
+                                key={i}
+                                className="flex flex-col justify-center p-3 bg-red-500/5 border border-red-500/10 rounded-xl"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-red-400">
+                                    {risk}
+                                  </span>
+                                  <AlertCircle
+                                    size={14}
+                                    className="text-red-500/50"
+                                  />
+                                </div>
+                                {risk === "HIGH_VALUE_THRESHOLD" && (
+                                  <span className="text-[9px] text-slate-500 mt-1">
+                                    Disclaimer: This document was flagged
+                                    because it contains a monetary value
+                                    exceeding the limit of $5,000.
+                                  </span>
+                                )}
                               </div>
-                              {risk === 'HIGH_VALUE_THRESHOLD' && (
-                                <span className="text-[9px] text-slate-500 mt-1">
-                                  Disclaimer: This document was flagged because it contains a monetary value exceeding the limit of $5,000.
-                                </span>
-                              )}
-                            </div>
-                          ))
+                            ),
+                          )
                         ) : (
                           <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-emerald-500/80 text-[10px] font-bold">
                             Zero Risks Detected in Current Pattern
@@ -376,19 +469,35 @@ export default function ReviewDocument({ navigate, id }) {
                         {lifecycle.length > 0 ? (
                           lifecycle.map((entry, idx) => (
                             <div key={idx} className="relative">
-                              <div className={clsx(
-                                "absolute -left-6 top-1.5 w-4 h-4 rounded-full border-4 border-brand-950",
-                                entry.to === "REJECTED" ? "bg-red-500" :
-                                  entry.to === "APPROVED" || entry.to === "ARCHIVED" ? "bg-emerald-500" :
-                                    entry.to === "APPROVAL_PENDING" ? "bg-amber-500" : "bg-brand-800"
-                              )} />
+                              <div
+                                className={clsx(
+                                  "absolute -left-6 top-1.5 w-4 h-4 rounded-full border-4 border-brand-950",
+                                  entry.to === "REJECTED"
+                                    ? "bg-red-500"
+                                    : entry.to === "APPROVED" ||
+                                        entry.to === "ARCHIVED"
+                                      ? "bg-emerald-500"
+                                      : entry.to === "APPROVAL_PENDING"
+                                        ? "bg-amber-500"
+                                        : "bg-brand-800",
+                                )}
+                              />
                               <div className="p-4 bg-brand-950/50 border border-brand-800 rounded-xl">
                                 <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">
-                                  {entry.from === "NONE" ? "Initial Document Inflow" : `${entry.from} → ${entry.to}`}
+                                  {entry.from === "NONE"
+                                    ? "Initial Document Inflow"
+                                    : `${entry.from} → ${entry.to}`}
                                 </span>
                                 <div className="flex justify-between items-center mb-2">
-                                  <span className="text-[10px] text-white font-bold">{entry.actor_name || entry.actor_id} <span className="text-slate-600 font-mono text-[8px] ml-1 uppercase">{entry.actor_type}</span></span>
-                                  <span className="text-[8px] text-slate-500 font-mono">{formatIST(entry.timestamp)}</span>
+                                  <span className="text-[10px] text-white font-bold">
+                                    {entry.actor_name || entry.actor_id}{" "}
+                                    <span className="text-slate-600 font-mono text-[8px] ml-1 uppercase">
+                                      {entry.actor_type}
+                                    </span>
+                                  </span>
+                                  <span className="text-[8px] text-slate-500 font-mono">
+                                    {formatIST(entry.timestamp)}
+                                  </span>
                                 </div>
                                 {entry.notes && (
                                   <p className="text-[11px] text-slate-300 italic bg-brand-900/40 p-3 rounded-lg border border-brand-800/50 leading-relaxed">
@@ -402,8 +511,12 @@ export default function ReviewDocument({ navigate, id }) {
                           <div className="relative">
                             <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full bg-brand-800 border-4 border-brand-950" />
                             <div className="p-4 bg-brand-950/50 border border-brand-800 rounded-xl">
-                              <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Initial Ingestion</span>
-                              <p className="text-[10px] text-slate-400">System captured and archived record.</p>
+                              <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">
+                                Initial Ingestion
+                              </span>
+                              <p className="text-[10px] text-slate-400">
+                                System captured and archived record.
+                              </p>
                             </div>
                           </div>
                         )}
@@ -418,12 +531,15 @@ export default function ReviewDocument({ navigate, id }) {
 
         {/* Row 3: Dedicated Decision Area (Bottom of Page) */}
         <div className="bg-brand-950 border border-brand-800 rounded-2xl p-8 shadow-2xl flex flex-col md:flex-row gap-8">
-
           <div className="flex-1 space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-black text-white uppercase tracking-widest">Auditor Statement</label>
-                <span className="text-[9px] text-slate-500 font-mono">{notes.length} chars</span>
+                <label className="text-[10px] font-black text-white uppercase tracking-widest">
+                  Auditor Statement
+                </label>
+                <span className="text-[9px] text-slate-500 font-mono">
+                  {notes.length} chars
+                </span>
               </div>
               <textarea
                 value={notes}
@@ -437,7 +553,9 @@ export default function ReviewDocument({ navigate, id }) {
                 <label className="text-[10px] font-black text-brand-cyan uppercase tracking-widest flex items-center gap-1.5">
                   <Send size={9} /> Message to Uploader
                 </label>
-                <span className="text-[9px] text-slate-600 font-mono">Optional feedback</span>
+                <span className="text-[9px] text-slate-600 font-mono">
+                  Optional feedback
+                </span>
               </div>
               <textarea
                 value={uploaderMessage}
@@ -456,25 +574,37 @@ export default function ReviewDocument({ navigate, id }) {
                   "group cursor-pointer flex items-center justify-between p-6 rounded-2xl border transition-all duration-300",
                   digitallySigned
                     ? "bg-brand-accent/10 border-brand-accent/40 shadow-[0_0_20px_rgba(var(--brand-accent-rgb),0.1)]"
-                    : "bg-brand-900/50 border-brand-800 hover:border-brand-700"
+                    : "bg-brand-900/50 border-brand-800 hover:border-brand-700",
                 )}
               >
                 <div className="flex items-center gap-4">
-                  <div className={clsx(
-                    "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
-                    digitallySigned ? "bg-brand-accent text-white" : "bg-brand-800 text-slate-600 group-hover:text-slate-400"
-                  )}>
+                  <div
+                    className={clsx(
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
+                      digitallySigned
+                        ? "bg-brand-accent text-white"
+                        : "bg-brand-800 text-slate-600 group-hover:text-slate-400",
+                    )}
+                  >
                     <UserCheck size={24} />
                   </div>
                   <div>
-                    <h4 className="text-xs font-black text-white uppercase tracking-tight">Apply Digital Identity</h4>
-                    <p className="text-[10px] text-slate-500 font-medium leading-tight">Certifying data integrity & compliance.</p>
+                    <h4 className="text-xs font-black text-white uppercase tracking-tight">
+                      Apply Digital Identity
+                    </h4>
+                    <p className="text-[10px] text-slate-500 font-medium leading-tight">
+                      Certifying data integrity & compliance.
+                    </p>
                   </div>
                 </div>
-                <div className={clsx(
-                  "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-                  digitallySigned ? "bg-brand-accent border-brand-accent text-white" : "border-brand-700 bg-brand-950"
-                )}>
+                <div
+                  className={clsx(
+                    "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                    digitallySigned
+                      ? "bg-brand-accent border-brand-accent text-white"
+                      : "border-brand-700 bg-brand-950",
+                  )}
+                >
                   {digitallySigned && <Check size={14} strokeWidth={3} />}
                 </div>
               </div>
@@ -482,22 +612,34 @@ export default function ReviewDocument({ navigate, id }) {
               <div className="p-6 bg-brand-900/30 border border-brand-800 rounded-2xl">
                 <div className="flex items-center gap-3 mb-2">
                   <ShieldCheck size={18} className="text-brand-accent" />
-                  <h4 className="text-xs font-black text-white uppercase uppercase">Verification Mode</h4>
+                  <h4 className="text-xs font-black text-white uppercase uppercase">
+                    Verification Mode
+                  </h4>
                 </div>
-                <p className="text-[10px] text-slate-500 leading-relaxed">As a reviewer, your notes will be forwarded to the ultimate approver for final authorization.</p>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  As a reviewer, your notes will be forwarded to the ultimate
+                  approver for final authorization.
+                </p>
               </div>
             )}
 
             <div className="flex justify-between items-center mt-6">
               <div className="flex items-center gap-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                <div className={clsx("w-2 h-2 rounded-full", isDirty ? "bg-orange-500 animate-pulse" : "bg-emerald-500")} />
+                <div
+                  className={clsx(
+                    "w-2 h-2 rounded-full",
+                    isDirty ? "bg-orange-500 animate-pulse" : "bg-emerald-500",
+                  )}
+                />
                 {isDirty ? "Cache Mismatch" : "Records Synced"}
               </div>
               <button
                 onClick={() => handleSaveChanges()}
                 className={clsx(
                   "flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                  isDirty ? "text-brand-accent hover:opacity-80" : "text-slate-800 cursor-default"
+                  isDirty
+                    ? "text-brand-accent hover:opacity-80"
+                    : "text-slate-800 cursor-default",
                 )}
                 disabled={!isDirty || saving}
               >
@@ -506,7 +648,6 @@ export default function ReviewDocument({ navigate, id }) {
             </div>
           </div>
         </div>
-
       </div>
 
       {/* Intervention Modal */}
@@ -514,38 +655,49 @@ export default function ReviewDocument({ navigate, id }) {
         {showRejectModal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setShowRejectModal(false)}
               className="absolute inset-0 bg-brand-1000/95 backdrop-blur-xl"
             />
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
               className="relative w-full max-w-md bg-brand-900 border border-brand-800 rounded-[32px] p-10 text-center shadow-2xl"
             >
               <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 text-red-500 border border-red-500/20 shadow-lg">
                 <XCircle size={40} />
               </div>
-              <h3 className="text-2xl font-black text-white mb-3 uppercase tracking-tight">Audit Intervention</h3>
+              <h3 className="text-2xl font-black text-white mb-3 uppercase tracking-tight">
+                Audit Intervention
+              </h3>
               <p className="text-sm text-slate-400 mb-10 leading-relaxed">
-                Choose the destination for this record. Returning to reviewer shifts the workflow back, while discarding permanently archives it as a failure.
+                Choose the destination for this record. Returning to reviewer
+                shifts the workflow back, while discarding permanently archives
+                it as a failure.
               </p>
 
               <div className="space-y-4">
                 <button
-                  onClick={() => handleDecision('RETURN')}
+                  onClick={() => handleDecision("RETURN")}
                   className="w-full py-5 bg-brand-800 hover:bg-brand-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all border border-brand-700"
                 >
                   <Send size={18} className="text-orange-400" />
                   Reroute to Reviewer
                 </button>
                 <button
-                  onClick={() => handleDecision('REJECT')}
+                  onClick={() => handleDecision("REJECT")}
                   className="w-full py-5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all border border-red-500/20"
                 >
                   <Trash2 size={18} />
                   Terminate Record
                 </button>
-                <button onClick={() => setShowRejectModal(false)} className="text-[10px] font-black text-slate-600 uppercase tracking-widest mt-4 hover:text-white transition-colors">
+                <button
+                  onClick={() => setShowRejectModal(false)}
+                  className="text-[10px] font-black text-slate-600 uppercase tracking-widest mt-4 hover:text-white transition-colors"
+                >
                   Abort & Continue Audit
                 </button>
               </div>
@@ -555,15 +707,25 @@ export default function ReviewDocument({ navigate, id }) {
       </AnimatePresence>
 
       {toast && (
-        <div className={clsx(
-          "fixed bottom-8 right-8 px-8 py-5 rounded-2xl shadow-2xl z-[300] border-2 flex items-center gap-4 animate-in slide-in-from-right-10",
-          toast.type === 'error' ? 'bg-red-950 border-red-900 text-red-200' : 'bg-brand-900 border-brand-800 text-white'
-        )}>
-          <div className={clsx("w-2.5 h-2.5 rounded-full", toast.type === 'error' ? "bg-red-500" : "bg-brand-accent shadow-[0_0_8px_rgba(var(--brand-accent-rgb),1)]")} />
+        <div
+          className={clsx(
+            "fixed bottom-8 right-8 px-8 py-5 rounded-2xl shadow-2xl z-[300] border-2 flex items-center gap-4 animate-in slide-in-from-right-10",
+            toast.type === "error"
+              ? "bg-red-950 border-red-900 text-red-200"
+              : "bg-brand-900 border-brand-800 text-white",
+          )}
+        >
+          <div
+            className={clsx(
+              "w-2.5 h-2.5 rounded-full",
+              toast.type === "error"
+                ? "bg-red-500"
+                : "bg-brand-accent shadow-[0_0_8px_rgba(var(--brand-accent-rgb),1)]",
+            )}
+          />
           <p className="text-sm font-bold tracking-tight">{toast.msg}</p>
         </div>
       )}
-
     </DashboardLayout>
   );
 }

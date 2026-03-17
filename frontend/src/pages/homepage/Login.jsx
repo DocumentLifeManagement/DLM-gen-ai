@@ -2,7 +2,15 @@ import React, { useState } from "react";
 import LandingNavbar from "../../components/landing/LandingNavbar";
 import Button from "../../components/landing/Button";
 import Card from "../../components/landing/Card";
-import { Lock, Mail, ChevronLeft, AlertCircle, User, Eye, EyeOff } from "lucide-react";
+import {
+  Lock,
+  Mail,
+  ChevronLeft,
+  AlertCircle,
+  User,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Login({ navigate }) {
@@ -25,12 +33,12 @@ export default function Login({ navigate }) {
       }
 
       const response = await fetch(
-        "http://localhost:8000/api/v1/auth/login",
+        "https://dlm-gen-ai-production.up.railway.app/api/v1/auth/login",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password, role }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -72,8 +80,12 @@ export default function Login({ navigate }) {
         >
           <Card className="!p-6 md:!p-8 border-brand-800 bg-brand-900/60 backdrop-blur-xl max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-white mb-1">Welcome Back</h1>
-              <p className="text-slate-400 text-xs">Sign in to your DLM Agent account</p>
+              <h1 className="text-2xl font-bold text-white mb-1">
+                Welcome Back
+              </h1>
+              <p className="text-slate-400 text-xs">
+                Sign in to your DLM Agent account
+              </p>
             </div>
 
             {error && (
@@ -89,9 +101,14 @@ export default function Login({ navigate }) {
 
             <form onSubmit={handleLogin} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Email Address</label>
+                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">
+                  Email Address
+                </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                  <Mail
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                    size={18}
+                  />
                   <input
                     type="email"
                     className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 pl-10 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-accent transition-colors"
@@ -103,9 +120,14 @@ export default function Login({ navigate }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Password</label>
+                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">
+                  Password
+                </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                  <Lock
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                    size={18}
+                  />
                   <input
                     type={showPassword ? "text" : "password"}
                     className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 pl-10 pr-12 text-white placeholder-slate-600 focus:outline-none focus:border-brand-accent transition-colors"
@@ -124,7 +146,9 @@ export default function Login({ navigate }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">Role</label>
+                <label className="block text-xs font-semibold uppercase text-slate-500 mb-2">
+                  Role
+                </label>
                 <div className="relative">
                   <select
                     className="w-full bg-brand-950 border border-brand-800 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-brand-accent transition-colors appearance-none"
@@ -138,7 +162,19 @@ export default function Login({ navigate }) {
                     <option value="APPROVER">Approver</option>
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 9l-7 7-7-7"
+                      ></path>
+                    </svg>
                   </div>
                 </div>
               </div>
@@ -158,14 +194,25 @@ export default function Login({ navigate }) {
             </form>
 
             <div className="mt-6 pt-4 border-t border-white/5 text-center flex flex-col items-center gap-2">
-              <span className="text-slate-400 text-xs">New to DLM Agent? <button onClick={() => navigate("/register")} className="text-brand-accent hover:text-white transition-colors font-medium">Create account</button></span>
-              <button onClick={() => navigate("/")} className="text-slate-500 hover:text-white transition-colors text-xs flex items-center justify-center gap-2 mt-1">
+              <span className="text-slate-400 text-xs">
+                New to DLM Agent?{" "}
+                <button
+                  onClick={() => navigate("/register")}
+                  className="text-brand-accent hover:text-white transition-colors font-medium"
+                >
+                  Create account
+                </button>
+              </span>
+              <button
+                onClick={() => navigate("/")}
+                className="text-slate-500 hover:text-white transition-colors text-xs flex items-center justify-center gap-2 mt-1"
+              >
                 <ChevronLeft size={14} /> Back to Home
               </button>
             </div>
           </Card>
         </motion.div>
-      </div >
-    </div >
+      </div>
+    </div>
   );
 }

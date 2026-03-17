@@ -48,7 +48,7 @@ export default function UserManagement({ navigate }) {
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem("access_token");
-            const res = await fetch("http://localhost:8000/api/v1/users", {
+            const res = await fetch("https://dlm-gen-ai-production.up.railway.app/api/v1/users", {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (!res.ok) throw new Error("Failed to fetch users");
@@ -89,7 +89,7 @@ export default function UserManagement({ navigate }) {
         setFormLoading(true);
         try {
             const token = localStorage.getItem("access_token");
-            const res = await fetch("http://localhost:8000/api/v1/users", {
+            const res = await fetch("https://dlm-gen-ai-production.up.railway.app/api/v1/users", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -124,7 +124,7 @@ export default function UserManagement({ navigate }) {
 
         try {
             const token = localStorage.getItem("access_token");
-            const res = await fetch(`http://localhost:8000/api/v1/users/${userId}`, {
+            const res = await fetch(`https://dlm-gen-ai-production.up.railway.app/api/v1/users/${userId}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -154,7 +154,7 @@ export default function UserManagement({ navigate }) {
                 updatePayload.password = editingUser.password;
             }
 
-            const res = await fetch(`http://localhost:8000/api/v1/users/${editingUser.id}`, {
+            const res = await fetch(`https://dlm-gen-ai-production.up.railway.app/api/v1/users/${editingUser.id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
