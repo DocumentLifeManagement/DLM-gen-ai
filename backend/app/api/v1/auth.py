@@ -1,4 +1,4 @@
-# app/api/v1/auth.py
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -8,7 +8,8 @@ from app.core.security import verify_password
 from app.core.jwt import create_access_token
 
 class LoginRequest(BaseModel):
-    email: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
     password: str
     role: str
 
@@ -22,11 +23,19 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 @router.post("/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     email = request.email
+    full_name = request.full_name
     password = request.password
     role = request.role
     
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not verify_password(password, user.hashed_password):
+    if not email or not full_name:
+        raise HTTPException(status_code=400, detail="Email and Full Name are both required")
+
+    user = db.query(User).filter(User.email == email, User.full_name == full_name).first()
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found with provided email and name")
+        
+    if not verify_password(password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Verify role matches

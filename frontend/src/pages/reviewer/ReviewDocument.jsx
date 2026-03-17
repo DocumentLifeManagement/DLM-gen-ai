@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
+import SLACountdown from "../../components/dashboard/SLACountdown";
 
 export default function ReviewDocument({ navigate, id }) {
   const userRole = localStorage.getItem("role") || "reviewer";
@@ -234,6 +235,9 @@ export default function ReviewDocument({ navigate, id }) {
                   <AlertCircle size={10} className={documentData.risk_score > 3 ? "text-red-400" : "text-emerald-400"} />
                   <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Stability: {10 - documentData.risk_score}/10</span>
                 </div>
+                {!["APPROVED", "REJECTED", "FAILED"].includes(documentData.status) && (
+                  <SLACountdown createdAt={documentData.created_at} status={documentData.status} size="md" />
+                )}
               </div>
             </div>
           </div>

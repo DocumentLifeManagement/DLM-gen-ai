@@ -1,11 +1,12 @@
 import React from "react";
-import { UploadCloud, FileText, CheckCircle, Settings, LogOut, LayoutDashboard, ChevronLeft, ChevronRight, Users, X } from "lucide-react";
+import { UploadCloud, FileText, CheckCircle, Settings, LogOut, LayoutDashboard, ChevronLeft, ChevronRight, Users, X, ShieldAlert } from "lucide-react";
 import clsx from "clsx";
 
 export default function DashboardSidebar({ role, navigate, activePath, isCollapsed, onToggle, onMobileClose }) {
     const links = [
         { label: "Dashboard", href: `/${role}`, icon: LayoutDashboard },
         { label: "Users", href: "/admin/users", icon: Users, role: "admin" },
+        { label: "SLA Breaches", href: "/admin/sla", icon: ShieldAlert, role: "admin" },
     ];
 
     const filteredLinks = links.filter(l => !l.role || l.role === role);

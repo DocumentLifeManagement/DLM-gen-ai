@@ -11,7 +11,7 @@ export default function ContactUs({ navigate }) {
         <div className="bg-brand-950 min-h-screen text-slate-300 font-sans selection:bg-brand-accent/30 selection:text-white">
             <LandingNavbar navigate={navigate} />
 
-            <main className="pt-20">
+            <main className="pt-24 md:pt-32">
                 <Section className="py-20">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
                         {/* Contact Info */}

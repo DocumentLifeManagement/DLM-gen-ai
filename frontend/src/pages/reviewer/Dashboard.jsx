@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
+import SLACountdown from "../../components/dashboard/SLACountdown";
+import { useRealtimeDocuments } from "../../hooks/useRealtimeDocuments";
 
 
 // Forced IST Formatter
@@ -58,10 +60,42 @@ export default function ReviewerDashboard({ navigate }) {
   const limit = 8;
 
   const [toast, setToast] = useState(null);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
   }, []);
+
+  // Realtime WebSocket subscription — stable subscription
+  useRealtimeDocuments({
+    enabled: true,
+    onInsert: useCallback((newDoc) => {
+      console.log("[ReviewerDashboard] Realtime Insert:", newDoc.id);
+      setDocuments(prev => {
+        if (prev.find(d => d.id.toString() === newDoc.id.toString())) return prev;
+        return [newDoc, ...prev];
+      });
+      setIsRealtimeConnected(true);
+    }, []),
+    onUpdate: useCallback((payload) => {
+      console.log("[ReviewerDashboard] Realtime Update:", payload.new.id, payload.new.status);
+      setDocuments(prev => {
+        const docExists = prev.find(d => d.id.toString() === payload.new.id.toString());
+        if (docExists) {
+          return prev.map(d => d.id.toString() === payload.new.id.toString() ? payload.new : d);
+        } else {
+          // If it wasn't there before, add it (it might have just entered our filter range)
+          return [payload.new, ...prev];
+        }
+      });
+      setIsRealtimeConnected(true);
+    }, []),
+    onDelete: useCallback((deleted) => {
+      console.log("[ReviewerDashboard] Realtime Delete:", deleted.id);
+      setDocuments(prev => prev.filter(d => d.id.toString() !== deleted.id.toString()));
+      setIsRealtimeConnected(true);
+    }, []),
+  });
 
   useEffect(() => {
     applyFilters();
@@ -173,15 +207,28 @@ export default function ReviewerDashboard({ navigate }) {
   const total = documents.length;
   const pending = documents.filter(d => d.status === "REVIEW_PENDING").length;
   const reviewed = documents.filter(d => d.status === "REVIEWED" || d.status === "APPROVAL_PENDING").length;
+  const slaBreaches = documents.filter(d =>
+    ["REVIEW_PENDING", "NEEDS_REVIEW"].includes(d.status) &&
+    ((Date.now() - new Date(d.created_at).getTime()) > 48 * 60 * 60 * 1000)
+  ).length;
 
   return (
     <DashboardLayout role={userRole} navigate={navigate} title="Review Dashboard">
 
+      {/* Realtime indicator */}
+      {isRealtimeConnected && (
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg w-fit">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Live · Realtime Active</span>
+        </div>
+      )}
+
       {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 md:gap-6 mb-8">
         <StatCard title="Total Documents" value={total} icon={FileText} color="text-brand-accent" />
         <StatCard title="Pending Review" value={pending} icon={Clock} color="text-yellow-400" />
         <StatCard title="Reviewed Today" value={reviewed} icon={CheckCircle} color="text-green-400" />
+        <StatCard title="SLA Breaches" value={slaBreaches} icon={AlertCircle} color={slaBreaches > 0 ? "text-red-400" : "text-slate-400"} />
       </div>
 
       {/* Tabs */}
@@ -259,7 +306,7 @@ export default function ReviewerDashboard({ navigate }) {
           <div className="col-span-12 md:col-span-3">Document / ID</div>
           <div className="hidden md:block md:col-span-2">Date</div>
           <div className="hidden md:block md:col-span-1 text-center">Time</div>
-          <div className="hidden md:block md:col-span-2 text-center">Risk Analysis</div>
+          <div className="hidden md:block md:col-span-2 text-center">SLA Timer</div>
           <div className="col-span-6 md:col-span-2 text-center">Status</div>
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
@@ -306,20 +353,9 @@ export default function ReviewerDashboard({ navigate }) {
                     {formatIST(doc.created_at, "time")}
                   </div>
 
-                  {/* Risk Analysis Pillar */}
-                  <div className="hidden md:block md:col-span-2 text-center">
-                    {doc.risk_indicators?.length > 0 ? (
-                      <div className="flex items-center justify-center gap-2 text-red-500">
-                        <AlertCircle size={14} className="animate-pulse" />
-                        <span className="text-[9px] font-black uppercase tracking-tighter">
-                          Pattern Risk
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20 font-bold uppercase tracking-tighter scale-90">
-                        Low Risk
-                      </span>
-                    )}
+                  {/* SLA Countdown */}
+                  <div className="hidden md:flex md:col-span-2 justify-center">
+                    <SLACountdown createdAt={doc.created_at} status={doc.status} size="sm" />
                   </div>
 
                   <div className="col-span-6 md:col-span-2 flex justify-center">

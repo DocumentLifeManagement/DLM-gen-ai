@@ -15,6 +15,7 @@ import ApproverDashboard from "./pages/approver/Dashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminDocumentDetail from "./pages/admin/DocumentDetail";
 import UserManagement from "./pages/admin/UserManagement";
+import AdminSLABreaches from "./pages/admin/SLABreaches";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -36,6 +37,18 @@ export default function App() {
         navigate={navigate}
       >
         <UserManagement navigate={navigate} />
+      </ProtectedRoute>
+    );
+  }
+
+  if (currentPath === "/admin/sla") {
+    return (
+      <ProtectedRoute
+        role={userRole}
+        allowedRoles={["admin"]}
+        navigate={navigate}
+      >
+        <AdminSLABreaches navigate={navigate} />
       </ProtectedRoute>
     );
   }

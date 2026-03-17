@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
 
 // Forced IST Formatter
@@ -46,6 +46,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
+import SLACountdown from "../../components/dashboard/SLACountdown";
+import { useRealtimeDocuments } from "../../hooks/useRealtimeDocuments";
 
 export default function AdminDocumentDetail({ navigate, id }) {
     const userRole = "admin";
@@ -62,6 +64,25 @@ export default function AdminDocumentDetail({ navigate, id }) {
     const [activeTab, setActiveTab] = useState("metadata"); // metadata | audit
     const [showPurgeModal, setShowPurgeModal] = useState(false);
     const [lifecycle, setLifecycle] = useState([]);
+
+    // Realtime subscription for single document updates
+    useRealtimeDocuments({
+        enabled: !!id,
+        onUpdate: useCallback((payload) => {
+            if (payload.new.id.toString() === id.toString()) {
+                console.log("[Realtime] 🔄 Updating document state:", payload.new.id);
+                setDocumentData(payload.new);
+                if (payload.new.fields) setFields(payload.new.fields);
+            }
+        }, [id]),
+        onDelete: useCallback((old) => {
+            if (old.id.toString() === id.toString()) {
+                showToast("This document was deleted by another session.", "error");
+                setTimeout(() => navigate("/admin"), 2000);
+            }
+        }, [id, navigate])
+    });
+
 
     useEffect(() => {
         fetchDocument();
@@ -246,6 +267,9 @@ export default function AdminDocumentDetail({ navigate, id }) {
                                     <Activity size={10} className="text-brand-cyan" />
                                     <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Status: {documentData.status.replace("_", " ")}</span>
                                 </div>
+                                {!["APPROVED", "REJECTED", "FAILED", "ARCHIVED"].includes(documentData.status) && (
+                                    <SLACountdown createdAt={documentData.created_at} status={documentData.status} size="md" />
+                                )}
                             </div>
                         </div>
                     </div>

@@ -27,44 +27,44 @@ export default function LandingNavbar({ navigate }) {
     return (
         <nav
             className={clsx(
-                "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+                "fixed top-0 left-0 right-0 z-[1000] transition-all duration-500 border-b",
                 scrolled
-                    ? "bg-brand-950/80 backdrop-blur-md border-b border-white/5 py-4"
-                    : "bg-transparent py-6"
+                    ? "bg-[#020617]/90 backdrop-blur-2xl border-white/10 py-3 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]"
+                    : "bg-[#020617]/50 backdrop-blur-sm border-transparent py-5"
             )}
         >
             <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
                 {/* Logo */}
                 <div
-                    className="flex items-center gap-2 cursor-pointer"
+                    className="flex items-center gap-3 cursor-pointer group"
                     onClick={() => navigate("/")}
                 >
-                    <div className="w-10 h-10 bg-gradient-to-br from-brand-accent to-brand-cyan rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                        <CopyCheck size={24} />
+                    <div className="w-11 h-11 bg-gradient-to-br from-brand-accent to-brand-cyan rounded-xl flex items-center justify-center text-white shadow-xl shadow-indigo-500/30 group-hover:scale-105 transition-transform duration-300">
+                        <CopyCheck size={26} />
                     </div>
-                    <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                    <span className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-slate-500 tracking-tight">
                         DLM Agent
                     </span>
                 </div>
 
                 {/* Desktop Links */}
-                <div className="hidden md:flex items-center gap-8 ml-auto">
+                <div className="hidden md:flex items-center gap-10 ml-auto">
                     {navLinks.map((link) => (
                         <button
                             key={link.label}
                             onClick={() => navigate(link.path)}
                             className={clsx(
-                                "text-sm font-medium transition-all duration-300 relative py-1",
+                                "text-[15px] font-bold transition-all duration-300 relative py-2 tracking-wide",
                                 currentPath === link.path
                                     ? "text-white"
-                                    : "text-slate-400 hover:text-slate-200"
+                                    : "text-slate-400 hover:text-white"
                             )}
                         >
                             {link.label}
                             {currentPath === link.path && (
                                 <motion.div
                                     layoutId="nav-underline"
-                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_8px_rgba(79,70,229,0.5)]"
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_12px_rgba(99,102,241,0.6)]"
                                 />
                             )}
                         </button>
@@ -72,20 +72,20 @@ export default function LandingNavbar({ navigate }) {
                 </div>
 
                 {/* CTA */}
-                <div className="hidden md:flex items-center gap-4 ml-8">
+                <div className="hidden md:flex items-center gap-6 ml-10">
                     <button
                         onClick={() => navigate("/login")}
-                        className="text-sm font-medium text-slate-300 hover:text-white transition-colors"
+                        className="text-[15px] font-bold text-slate-400 hover:text-white transition-colors tracking-wide"
                     >
                         Sign In
                     </button>
                     <Button
                         variant="primary"
                         onClick={() => navigate("/register")}
-                        className="!py-2 !px-4 !text-sm"
+                        className="!py-2.5 !px-6 !text-sm !font-bold rounded-xl"
                     >
-                        Sign Up
-                        <ChevronRight size={16} />
+                        Get Started
+                        <ChevronRight size={18} />
                     </Button>
                 </div>
 

@@ -79,7 +79,7 @@ export default function HeroSection({ navigate }) {
     }, []);
 
     return (
-        <div className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-brand-950">
+        <div className="relative min-h-screen flex items-center justify-center pt-24 pb-20 overflow-hidden bg-brand-950">
             {/* Background Gradients */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-accent/20 rounded-full blur-[120px] animate-blob" />

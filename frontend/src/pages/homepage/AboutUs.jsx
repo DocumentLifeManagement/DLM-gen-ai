@@ -10,7 +10,7 @@ export default function AboutUs({ navigate }) {
         <div className="bg-brand-950 min-h-screen text-slate-300 font-sans selection:bg-brand-accent/30 selection:text-white">
             <LandingNavbar navigate={navigate} />
 
-            <main className="pt-20">
+            <main className="pt-24 md:pt-32">
                 {/* Hero */}
                 <Section className="text-center py-20">
                     <motion.h1

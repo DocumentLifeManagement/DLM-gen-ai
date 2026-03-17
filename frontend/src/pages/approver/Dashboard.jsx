@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import SLACountdown from "../../components/dashboard/SLACountdown";
+import { useRealtimeDocuments } from "../../hooks/useRealtimeDocuments";
 
 // Forced IST Formatter
 const formatIST = (date, type = "both") => {
@@ -51,6 +53,7 @@ export default function ApproverDashboard({ navigate }) {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortOrder, setSortOrder] = useState("desc");
   const [toast, setToast] = useState(null);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
   const [page, setPage] = useState(1);
 
   const limit = 8;
@@ -58,6 +61,36 @@ export default function ApproverDashboard({ navigate }) {
   useEffect(() => {
     fetchDocuments();
   }, []);
+
+  // Realtime WebSocket subscription — stable
+  useRealtimeDocuments({
+    enabled: true,
+    onInsert: useCallback((newDoc) => {
+      console.log("[ApproverDashboard] Realtime Insert:", newDoc.id);
+      setDocuments(prev => {
+        if (prev.find(d => d.id.toString() === newDoc.id.toString())) return prev;
+        return [newDoc, ...prev];
+      });
+      setIsRealtimeConnected(true);
+    }, []),
+    onUpdate: useCallback((payload) => {
+      console.log("[ApproverDashboard] Realtime Update:", payload.new.id, payload.new.status);
+      setDocuments(prev => {
+        const docExists = prev.find(d => d.id.toString() === payload.new.id.toString());
+        if (docExists) {
+          return prev.map(d => d.id.toString() === payload.new.id.toString() ? payload.new : d);
+        } else {
+          return [payload.new, ...prev];
+        }
+      });
+      setIsRealtimeConnected(true);
+    }, []),
+    onDelete: useCallback((deleted) => {
+      console.log("[ApproverDashboard] Realtime Delete:", deleted.id);
+      setDocuments(prev => prev.filter(d => d.id.toString() !== deleted.id.toString()));
+      setIsRealtimeConnected(true);
+    }, []),
+  });
 
   useEffect(() => {
     applyFilters();
@@ -189,6 +222,10 @@ export default function ApproverDashboard({ navigate }) {
   const total = documents.length;
   const pending = documents.filter(d => d.status === "APPROVAL_PENDING" || d.status === "REVIEWED").length;
   const approved = documents.filter(d => d.status === "APPROVED").length;
+  const slaBreaches = documents.filter(d =>
+    ["APPROVAL_PENDING", "REVIEWED"].includes(d.status) &&
+    ((Date.now() - new Date(d.created_at).getTime()) > 48 * 60 * 60 * 1000)
+  ).length;
 
   return (
     <DashboardLayout
@@ -196,11 +233,19 @@ export default function ApproverDashboard({ navigate }) {
       navigate={navigate}
       title="Approver Dashboard"
     >
+      {/* Realtime indicator */}
+      {isRealtimeConnected && (
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg w-fit">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Live · Realtime Active</span>
+        </div>
+      )}
       {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 md:gap-6 mb-8">
         <StatCard title="Total Documents" value={total} icon={FileText} color="text-brand-accent" />
         <StatCard title="Pending Approval" value={pending} icon={Clock} color="text-orange-400" />
         <StatCard title="Approved" value={approved} icon={CheckCircle} color="text-green-400" />
+        <StatCard title="SLA Breaches" value={slaBreaches} icon={AlertCircle} color={slaBreaches > 0 ? "text-red-400" : "text-slate-400"} />
       </div>
 
       {/* Controls */}
@@ -269,7 +314,7 @@ export default function ApproverDashboard({ navigate }) {
           <div className="col-span-12 md:col-span-3">Document / ID</div>
           <div className="hidden md:block md:col-span-2">Date</div>
           <div className="hidden md:block md:col-span-1 text-center">Time</div>
-          <div className="hidden md:block md:col-span-2 text-center">Risk Analysis</div>
+          <div className="hidden md:block md:col-span-2 text-center">SLA Timer</div>
           <div className="col-span-6 md:col-span-2 text-center">Status</div>
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
@@ -319,17 +364,9 @@ export default function ApproverDashboard({ navigate }) {
                     {formatIST(doc.created_at, "time")}
                   </div>
 
-                  {/* Risk Analysis Pillar */}
-                  <div className="hidden md:block md:col-span-2 text-center">
-                    {doc.risk_indicators?.length > 0 ? (
-                      <span className="text-[9px] px-2 py-0.5 bg-red-500/10 text-red-500 rounded border border-red-500/20 font-bold">
-                        {doc.risk_indicators[0]}
-                      </span>
-                    ) : (
-                      <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20 font-bold uppercase tracking-tighter">
-                        Low Risk
-                      </span>
-                    )}
+                  {/* SLA Countdown */}
+                  <div className="hidden md:flex md:col-span-2 justify-center">
+                    <SLACountdown createdAt={doc.created_at} status={doc.status} size="sm" />
                   </div>
 
                   <div className="col-span-6 md:col-span-2 flex justify-center">
