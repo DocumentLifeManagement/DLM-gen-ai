@@ -1,5 +1,30 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import clsx from "clsx";
+import { motion, AnimatePresence } from "framer-motion";
+
+
+// Forced IST Formatter
+const formatIST = (date, type = "both") => {
+  if (!date) return "—";
+  try {
+    const d = new Date(date);
+    const options = {
+      timeZone: 'Asia/Kolkata',
+      hour12: true
+    };
+
+    if (type === "date") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+    } else if (type === "time") {
+      return new Intl.DateTimeFormat('en-IN', { ...options, hour: '2-digit', minute: '2-digit' }).format(d);
+    }
+    return new Intl.DateTimeFormat('en-IN', { ...options, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d) + " IST";
+  } catch (e) {
+    return String(date);
+  }
+};
+
 import StatCard from "../../components/dashboard/StatCard";
 import Button from "../../components/landing/Button";
 import {
@@ -12,7 +37,8 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal
+  SlidersHorizontal,
+  AlertCircle
 } from "lucide-react";
 
 export default function ReviewerDashboard({ navigate }) {
@@ -25,6 +51,7 @@ export default function ReviewerDashboard({ navigate }) {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [activeTab, setActiveTab] = useState("active");
   const [sortOrder, setSortOrder] = useState("desc");
 
   const [page, setPage] = useState(1);
@@ -38,12 +65,16 @@ export default function ReviewerDashboard({ navigate }) {
 
   useEffect(() => {
     applyFilters();
-  }, [documents, search, statusFilter, sortOrder]);
+  }, [documents, search, statusFilter, sortOrder, activeTab]);
 
   const fetchDocuments = async () => {
     try {
+      const token = localStorage.getItem("access_token");
       const res = await fetch(
-        "http://localhost:8000/api/v1/documents"
+        "http://localhost:8000/api/v1/documents",
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
       );
 
       if (!res.ok) throw new Error("Failed to fetch documents");
@@ -60,13 +91,19 @@ export default function ReviewerDashboard({ navigate }) {
   const applyFilters = () => {
     let temp = [...documents];
 
-    if (statusFilter !== "ALL") {
-      temp = temp.filter((doc) => doc.status === statusFilter);
+    if (activeTab === "rejected") {
+      temp = temp.filter((doc) => doc.status === "REJECTED" || doc.status === "FAILED");
+    } else {
+      temp = temp.filter((doc) => doc.status !== "REJECTED" && doc.status !== "FAILED");
+      if (statusFilter !== "ALL") {
+        temp = temp.filter((doc) => doc.status === statusFilter);
+      }
     }
 
     if (search) {
       temp = temp.filter((doc) =>
-        doc.filename.toLowerCase().includes(search.toLowerCase())
+        doc.filename?.toLowerCase().includes(search.toLowerCase()) ||
+        doc.id?.toString().includes(search)
       );
     }
 
@@ -82,21 +119,29 @@ export default function ReviewerDashboard({ navigate }) {
   const handleApprove = async (id, e) => {
     e.stopPropagation(); // Prevent row click
 
+    const token = localStorage.getItem("access_token");
+
     // Optimistic update
     const updated = documents.map((doc) =>
-      doc.id === id ? { ...doc, status: "REVIEWED" } : doc
+      doc.id === id ? { ...doc, status: "APPROVAL_PENDING" } : doc
     );
     setDocuments(updated);
 
     try {
-      await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/approve`,
-        { method: "POST" }
+      const res = await fetch(
+        `http://localhost:8000/api/v1/documents/${id}/review`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        }
       );
 
-      showToast("Document approved successfully");
-    } catch {
-      showToast("Approval failed");
+      if (!res.ok) throw new Error("Verification rejected by system");
+
+      showToast("Verification complete. Document sent to Approval queue.");
+      fetchDocuments(); // Final sync
+    } catch (err) {
+      showToast(err.message || "Verification failed");
       fetchDocuments();
     }
   };
@@ -114,9 +159,11 @@ export default function ReviewerDashboard({ navigate }) {
   const statusBadge = (status) => {
     const styles = {
       UPLOADED: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-      PROCESSING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-      NEEDS_REVIEW: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+      PROCESSING: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      REVIEW_PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+      APPROVAL_PENDING: "bg-green-500/10 text-green-400 border-green-500/20",
       REVIEWED: "bg-green-500/10 text-green-400 border-green-500/20",
+      REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
       FAILED: "bg-red-500/10 text-red-400 border-red-500/20",
     };
     return styles[status] || "bg-slate-500/10 text-slate-400 border-slate-500/20";
@@ -124,17 +171,41 @@ export default function ReviewerDashboard({ navigate }) {
 
   // Stats
   const total = documents.length;
-  const pending = documents.filter(d => d.status === "NEEDS_REVIEW").length;
-  const reviewed = documents.filter(d => d.status === "REVIEWED").length;
+  const pending = documents.filter(d => d.status === "REVIEW_PENDING").length;
+  const reviewed = documents.filter(d => d.status === "REVIEWED" || d.status === "APPROVAL_PENDING").length;
 
   return (
     <DashboardLayout role={userRole} navigate={navigate} title="Review Dashboard">
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
         <StatCard title="Total Documents" value={total} icon={FileText} color="text-brand-accent" />
         <StatCard title="Pending Review" value={pending} icon={Clock} color="text-yellow-400" />
         <StatCard title="Reviewed Today" value={reviewed} icon={CheckCircle} color="text-green-400" />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-4 border-b border-brand-800 mb-6 font-mono overflow-x-auto">
+        <button
+          onClick={() => { setActiveTab("active"); setPage(1); }}
+          className={clsx(
+            "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative px-2 whitespace-nowrap shrink-0",
+            activeTab === "active" ? "text-brand-accent" : "text-slate-600 hover:text-slate-400"
+          )}
+        >
+          Active Workload
+          {activeTab === "active" && <motion.div layoutId="reviewerActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent" />}
+        </button>
+        <button
+          onClick={() => { setActiveTab("rejected"); setPage(1); }}
+          className={clsx(
+            "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative px-2 flex items-center gap-2 whitespace-nowrap shrink-0",
+            activeTab === "rejected" ? "text-rose-500" : "text-slate-600 hover:text-slate-400"
+          )}
+        >
+          Rejected / Bin
+          {activeTab === "rejected" && <motion.div layoutId="reviewerActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500" />}
+        </button>
       </div>
 
       {/* Controls */}
@@ -143,7 +214,7 @@ export default function ReviewerDashboard({ navigate }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
           <input
             type="text"
-            placeholder="Search documents by name..."
+            placeholder="Search documents by name or ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-brand-accent transition-colors"
@@ -151,19 +222,21 @@ export default function ReviewerDashboard({ navigate }) {
         </div>
 
         <div className="flex gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:flex-none">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full md:w-40 bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
-            >
-              <option value="ALL">All Status</option>
-              <option value="NEEDS_REVIEW">Needs Review</option>
-              <option value="REVIEWED">Reviewed</option>
-              <option value="PROCESSING">Processing</option>
-            </select>
-          </div>
+          {activeTab === "active" && (
+            <div className="relative flex-1 md:flex-none">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full md:w-40 bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-8 py-2.5 appearance-none focus:outline-none focus:border-brand-accent transition-colors text-sm"
+              >
+                <option value="ALL">All Status</option>
+                <option value="REVIEW_PENDING">Review Pending</option>
+                <option value="REVIEWED">Reviewed</option>
+                <option value="PROCESSING">Processing</option>
+              </select>
+            </div>
+          )}
 
           <div className="relative flex-1 md:flex-none">
             <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
@@ -183,9 +256,11 @@ export default function ReviewerDashboard({ navigate }) {
       <div className="bg-brand-900 border border-brand-800 rounded-xl overflow-hidden shadow-xl">
         {/* Header */}
         <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-brand-800 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-brand-950/50">
-          <div className="col-span-12 md:col-span-5">Document</div>
-          <div className="hidden md:block md:col-span-3">Date</div>
-          <div className="col-span-6 md:col-span-2">Status</div>
+          <div className="col-span-12 md:col-span-3">Document / ID</div>
+          <div className="hidden md:block md:col-span-2">Date</div>
+          <div className="hidden md:block md:col-span-1 text-center">Time</div>
+          <div className="hidden md:block md:col-span-2 text-center">Risk Analysis</div>
+          <div className="col-span-6 md:col-span-2 text-center">Status</div>
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
 
@@ -208,23 +283,47 @@ export default function ReviewerDashboard({ navigate }) {
                   className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-brand-800/30 transition-colors group cursor-pointer"
                   onClick={() => navigate(`/reviewer/document/${doc.id}`)}
                 >
-                  <div className="col-span-12 md:col-span-5 font-medium text-white flex items-center gap-4">
+                  <div className="col-span-12 md:col-span-3 font-medium text-white flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${doc.status === 'NEEDS_REVIEW' ? 'bg-orange-500/10 text-orange-400' : 'bg-brand-800 text-slate-400'}`}>
                       <FileText size={20} />
                     </div>
                     <div className="truncate">
-                      <p className="truncate text-sm md:text-base">{doc.filename}</p>
-                      <p className="md:hidden text-xs text-slate-500 mt-1">{new Date(doc.created_at).toLocaleDateString()}</p>
+                      <p className="truncate text-sm md:text-base text-white">{doc.filename}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[10px] text-slate-500 font-mono">ID: {doc.id}</p>
+                        {doc.tag && (
+                          <span className="text-[8px] px-1.5 py-0.5 bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/20 rounded font-mono uppercase tracking-[0.1em]">
+                            {doc.tag}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="hidden md:block md:col-span-3 text-slate-400 text-sm">
-                    {new Date(doc.created_at).toLocaleDateString()}
-                    <span className="block text-xs opacity-60 m-1">
-                      {new Date(doc.created_at).toLocaleTimeString()}
-                    </span>
+                  <div className="hidden md:block md:col-span-2 text-slate-400 text-xs">
+                    {formatIST(doc.created_at, "date")}
                   </div>
-                  <div className="col-span-6 md:col-span-2">
-                    <span className={`text-[10px] md:text-xs px-2.5 py-1 rounded-full border font-medium ${statusBadge(doc.status)}`}>
+                  <div className="hidden md:block md:col-span-1 text-[10px] font-mono text-slate-500 text-center">
+                    {formatIST(doc.created_at, "time")}
+                  </div>
+
+                  {/* Risk Analysis Pillar */}
+                  <div className="hidden md:block md:col-span-2 text-center">
+                    {doc.risk_indicators?.length > 0 ? (
+                      <div className="flex items-center justify-center gap-2 text-red-500">
+                        <AlertCircle size={14} className="animate-pulse" />
+                        <span className="text-[9px] font-black uppercase tracking-tighter">
+                          Pattern Risk
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded border border-emerald-500/20 font-bold uppercase tracking-tighter scale-90">
+                        Low Risk
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="col-span-6 md:col-span-2 flex justify-center">
+                    <span className={`text-[9px] md:text-[10px] px-3 py-1 rounded-full border font-black uppercase tracking-tight whitespace-nowrap ${statusBadge(doc.status)}`}>
                       {doc.status ? doc.status.replace("_", " ") : "INGESTED"}
                     </span>
                   </div>
@@ -236,7 +335,7 @@ export default function ReviewerDashboard({ navigate }) {
                     >
                       <Eye size={18} />
                     </button>
-                    {doc.status === "NEEDS_REVIEW" && (
+                    {doc.status === "REVIEW_PENDING" && (
                       <button
                         onClick={(e) => handleApprove(doc.id, e)}
                         className="p-2 text-slate-400 hover:text-green-400 hover:bg-green-900/30 rounded-lg transition-colors"

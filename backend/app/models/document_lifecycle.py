@@ -13,4 +13,7 @@ class DocumentLifecycle(Base):
     to_state = Column(String, nullable=False)
     actor_type = Column(String)   # USER / SYSTEM / SERVICE
     actor_id = Column(String)     # user_id or service_name
+    actor_name = Column(String, nullable=True)
+    actor_email = Column(String, nullable=True)
+    notes = Column(String, nullable=True) # captured notes during transition
     timestamp = Column(DateTime, default=datetime.utcnow)

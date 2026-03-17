@@ -2,12 +2,11 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 import boto3
 import uuid
 import os
-from ...utils.text_parser import *
+from app.utils.text_parser import extract_key_value_pairs, extract_lines, extract_tables
 from dotenv import load_dotenv
 from app.models.document import Document, TextractJob
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal
 from app.core.rbac import require_role
 
 load_dotenv()
@@ -73,7 +72,12 @@ async def upload_and_analyze(
     # Upload file to S3
     file_extension = file.filename.split(".")[-1]
     key = f"documents/{str(uuid.uuid4())}.{file_extension}"
-    s3_client.upload_fileobj(file.file, S3_BUCKET, key)
+    s3_client.upload_fileobj(
+        file.file, 
+        S3_BUCKET, 
+        key,
+        ExtraArgs={"ContentType": file.content_type}
+    )
 
     doc = Document(
         s3_bucket=S3_BUCKET,
@@ -86,14 +90,23 @@ async def upload_and_analyze(
     db.commit()
     db.refresh(doc)
     
-    job = start_textract_job(doc.id, S3_BUCKET, key)
+    # Start Camunda process instantly
+    from app.core.camunda import zeebe_client
+    if zeebe_client:
+        try:
+            await zeebe_client.run_process(bpmn_process_id="document_lifecycle", variables={"document_id": doc.id})
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to start workflow: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to start Camunda workflow: {e}")
+    else:
+        raise HTTPException(status_code=500, detail="Camunda Zeebe client not configured properly")
     
     return {
         "id": doc.id,
         "filename": doc.filename,
         "status": doc.status,
-        "created_at": doc.created_at.isoformat(),
-        "job_id": job.job_id
+        "created_at": doc.created_at.isoformat()
     }
 
 @router.get("/results/{job_id}")

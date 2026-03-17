@@ -76,16 +76,83 @@ def handle_completed_textract_job(job: TextractJob):
     kv_pairs = extract_key_value_pairs(blocks)
     tables = extract_tables(blocks)
 
+    total_confidence = 0
+    kv_count = 0
+
+    # Amount synonyms for normalization
+    amount_synonyms = ["gross", "total", "amount", "price", "net", "subtotal", "balance", "total due", "grand total"]
+
     for kv in kv_pairs:
+        conf = kv["val_conf"] if kv["val_conf"] is not None else kv["key_conf"]
+        total_confidence += conf
+        kv_count += 1
+
+        # Normalize key naming for payments/amounts
+        original_key = kv["key"]
+        normalized_key = original_key
+        k_lower = original_key.lower()
+        
+        if any(syn in k_lower for syn in amount_synonyms):
+            normalized_key = "General Amount"
+
         db.add(KeyValue(
             document_id=job.document_id,
             job_id=job.id,
             page=1,
-            key_text=kv["key"],
+            key_text=normalized_key, # Use normalized key
             value_text=kv["value"],
             key_confidence=kv["key_conf"],
             value_confidence=kv["val_conf"],
         ))
+
+    # Update document with identified fields
+    doc = job.document
+
+    # ---- 5️⃣ Risk Assessment Logic ----
+    avg_confidence = total_confidence / kv_count if kv_count > 0 else 0
+    indicators = []
+    risk_score = 0.0
+
+    # Indicator: Low overall confidence
+    if avg_confidence < 0.80:
+        indicators.append("MODERATE_CONFIDENCE_RISK")
+        risk_score += 3.0
+    elif avg_confidence < 0.60:
+        indicators.append("HIGH_CONFIDENCE_RISK")
+        risk_score += 5.0
+
+    # Indicator: Amount Anomaly (Checking for values > 5000 in fields localized as Amounts)
+    for kv in kv_pairs:
+        k_lower = kv["key"].lower()
+        if any(syn in k_lower for syn in amount_synonyms):
+            try:
+                # Basic string cleaning for amount parsing
+                clean_val = kv["value"].replace("$", "").replace(",", "").strip()
+                amount = float(clean_val)
+                if amount > 5000:
+                    if "HIGH_VALUE_THRESHOLD" not in indicators:
+                        indicators.append("HIGH_VALUE_THRESHOLD")
+                        risk_score += 4.0
+            except:
+                pass
+
+    # Indicator: Low confidence on critical individual field
+    for kv in kv_pairs:
+        k_lower = kv["key"].lower()
+        if ("total" in k_lower or "amount" in k_lower) and (kv["val_conf"] or 0) < 0.70:
+            if "CRITICAL_FIELD_UNCERTAINTY" not in indicators:
+                indicators.append("CRITICAL_FIELD_UNCERTAINTY")
+                risk_score += 2.0
+
+    # Normalize risk score to 10 max
+    doc.risk_score = min(10.0, risk_score)
+    doc.risk_indicators = indicators
+
+    # Update document status based on assessment
+    if avg_confidence > 0.85 and doc.risk_score < 3.0:
+        doc.status = "APPROVED" # Auto-approve if high confidence and low risk
+    else:
+        doc.status = "REVIEW_PENDING"
 
     for table in tables:
         t = Table(document_id=job.document_id, job_id=job.id, page=table["page"])

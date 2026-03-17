@@ -3,6 +3,7 @@ import { useRouter } from "./router/useRouter";
 
 import Home from "./pages/homepage/Home";
 import Login from "./pages/homepage/Login";
+import Register from "./pages/homepage/Register";
 
 import AboutUs from "./pages/homepage/AboutUs";
 import ContactUs from "./pages/homepage/ContactUs";
@@ -12,23 +13,56 @@ import ReviewerDashboard from "./pages/reviewer/Dashboard";
 import ReviewDoc from "./pages/reviewer/ReviewDocument";
 import ApproverDashboard from "./pages/approver/Dashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
+import AdminDocumentDetail from "./pages/admin/DocumentDetail";
+import UserManagement from "./pages/admin/UserManagement";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
-  const { currentPath, navigate, params } = useRouter();
+  const { currentPath, navigate, params, query } = useRouter();
 
   // role stored after login (mock RBAC)
-  const userRole = localStorage.getItem("role") || "uploader";
+  const userRole = localStorage.getItem("role");
+  const token = localStorage.getItem("access_token");
 
   /* ------------------------------
-     Dynamic Reviewer Document Route
+     Admin User Management
      ------------------------------ */
-  if (currentPath.startsWith("/reviewer/document/")) {
+  if (currentPath === "/admin/users") {
     return (
       <ProtectedRoute
         role={userRole}
-        allowedRoles={["reviewer"]}
+        allowedRoles={["admin"]}
+        navigate={navigate}
+      >
+        <UserManagement navigate={navigate} />
+      </ProtectedRoute>
+    );
+  }
+
+  /* ------------------------------
+     Admin Document Detail Route
+     ------------------------------ */
+  if (currentPath.startsWith("/admin/document/")) {
+    return (
+      <ProtectedRoute
+        role={userRole}
+        allowedRoles={["admin"]}
+        navigate={navigate}
+      >
+        <AdminDocumentDetail navigate={navigate} id={params.id} />
+      </ProtectedRoute>
+    );
+  }
+
+  /* ------------------------------
+     Reviewer/Approver Document Detail Route
+     ------------------------------ */
+  if (currentPath.startsWith("/reviewer/document/") || currentPath.startsWith("/approver/document/")) {
+    return (
+      <ProtectedRoute
+        role={userRole}
+        allowedRoles={["reviewer", "approver"]}
         navigate={navigate}
       >
         <ReviewDoc navigate={navigate} id={params.id} />
@@ -46,6 +80,9 @@ export default function App() {
 
     case "/login":
       return <Login navigate={navigate} />;
+
+    case "/register":
+      return <Register navigate={navigate} />;
 
     case "/about":
       return <AboutUs navigate={navigate} />;
@@ -93,7 +130,7 @@ export default function App() {
           allowedRoles={["admin"]}
           navigate={navigate}
         >
-          <AdminDashboard navigate={navigate} />
+          <AdminDashboard navigate={navigate} query={query} />
         </ProtectedRoute>
       );
 

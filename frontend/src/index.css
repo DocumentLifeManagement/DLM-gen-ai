@@ -2,12 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 0px;
-  background: transparent;
+/* Prevent horizontal overflow on mobile */
+html,
+body {
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(14, 165, 233, 0.2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 165, 233, 0.5);
+}
+
+/* custom-scrollbar class for specific elements */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(14, 165, 233, 0.15);
+  border-radius: 10px;
+}
+
+/* Better tap targets on mobile */
+button,
+a,
+[role="button"] {
+  min-height: 36px;
+}
 
 @layer utilities {
   .animate-blob {

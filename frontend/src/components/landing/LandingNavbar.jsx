@@ -17,9 +17,12 @@ export default function LandingNavbar({ navigate }) {
     }, []);
 
     const navLinks = [
+        { label: "Home", path: "/" },
         { label: "About Us", path: "/about" },
         { label: "Contact Us", path: "/contact" },
     ];
+
+    const currentPath = window.location.pathname;
 
     return (
         <nav
@@ -50,9 +53,20 @@ export default function LandingNavbar({ navigate }) {
                         <button
                             key={link.label}
                             onClick={() => navigate(link.path)}
-                            className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                            className={clsx(
+                                "text-sm font-medium transition-all duration-300 relative py-1",
+                                currentPath === link.path
+                                    ? "text-white"
+                                    : "text-slate-400 hover:text-slate-200"
+                            )}
                         >
                             {link.label}
+                            {currentPath === link.path && (
+                                <motion.div
+                                    layoutId="nav-underline"
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_8px_rgba(79,70,229,0.5)]"
+                                />
+                            )}
                         </button>
                     ))}
                 </div>
@@ -67,10 +81,10 @@ export default function LandingNavbar({ navigate }) {
                     </button>
                     <Button
                         variant="primary"
-                        onClick={() => navigate("/login")} // Assuming Request Demo leads to login/contact for now
+                        onClick={() => navigate("/register")}
                         className="!py-2 !px-4 !text-sm"
                     >
-                        Request Demo
+                        Sign Up
                         <ChevronRight size={16} />
                     </Button>
                 </div>
@@ -101,7 +115,10 @@ export default function LandingNavbar({ navigate }) {
                                         navigate(link.path);
                                         setMobileMenuOpen(false);
                                     }}
-                                    className="text-slate-300 hover:text-white py-2 text-left"
+                                    className={clsx(
+                                        "py-2 text-left transition-colors",
+                                        currentPath === link.path ? "text-brand-accent font-bold" : "text-slate-300"
+                                    )}
                                 >
                                     {link.label}
                                 </button>
@@ -115,10 +132,10 @@ export default function LandingNavbar({ navigate }) {
                             </button>
                             <Button
                                 variant="primary"
-                                onClick={() => navigate("/login")}
+                                onClick={() => navigate("/register")}
                                 className="w-full justify-center"
                             >
-                                Request Demo
+                                Sign Up
                             </Button>
                         </div>
                     </motion.div>

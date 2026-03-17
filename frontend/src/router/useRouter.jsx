@@ -6,8 +6,11 @@ const routes = {
   "/uploader": "UploaderDashboard",
   "/reviewer": "ReviewerDashboard",
   "/reviewer/document/:id": "ReviewDoc",
+  "/admin/document/:id": "AdminDocumentDetail",
+  "/approver/document/:id": "ReviewDoc",
   "/approver": "ApproverDashboard",
   "/admin": "AdminDashboard",
+  "/admin/users": "UserManagement",
 };
 
 export function useRouter() {
@@ -15,7 +18,8 @@ export function useRouter() {
 
   const navigate = (path) => {
     window.history.pushState({}, "", path);
-    setCurrentPath(path);
+    const pathPart = path.split("?")[0];
+    setCurrentPath(pathPart);
   };
 
   useEffect(() => {
@@ -27,7 +31,7 @@ export function useRouter() {
   const params = {};
   for (const route of Object.keys(routes)) {
     const routeParts = route.split("/");
-    const pathParts = currentPath.split("/");
+    const pathParts = currentPath.split("?")[0].split("/");
 
     if (routeParts.length === pathParts.length) {
       routeParts.forEach((part, i) => {
@@ -39,5 +43,12 @@ export function useRouter() {
     }
   }
 
-  return { currentPath, navigate, params };
+  // Parse query parameters
+  const query = {};
+  const searchParams = new URLSearchParams(window.location.search);
+  searchParams.forEach((value, key) => {
+    query[key] = value;
+  });
+
+  return { currentPath, navigate, params, query };
 }
