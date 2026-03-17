@@ -72,12 +72,9 @@ export default function AdminDocumentDetail({ navigate, id }) {
   const fetchDocument = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(
-        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const res = await fetch(`http://localhost:8000/api/v1/documents/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!res.ok) throw new Error("Failed to fetch document details");
 
@@ -96,7 +93,7 @@ export default function AdminDocumentDetail({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/lifecycle`,
+        `http://localhost:8000/api/v1/documents/${id}/lifecycle`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -127,7 +124,7 @@ export default function AdminDocumentDetail({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/update-fields`,
+        `http://localhost:8000/api/v1/documents/${id}/update-fields`,
         {
           method: "PUT",
           headers: {
@@ -155,13 +152,10 @@ export default function AdminDocumentDetail({ navigate, id }) {
     setSaving(true);
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(
-        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const res = await fetch(`http://localhost:8000/api/v1/documents/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!res.ok) throw new Error("Database purge command failed");
 
@@ -189,7 +183,7 @@ export default function AdminDocumentDetail({ navigate, id }) {
 
       // Admin bypasses standard review/approve flow but we can still record decision
       const res = await fetch(
-        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${docId}/approve`,
+        `http://localhost:8000/api/v1/documents/${docId}/approve`,
         {
           method: "POST",
           headers: {
@@ -206,13 +200,10 @@ export default function AdminDocumentDetail({ navigate, id }) {
       if (!res.ok) throw new Error("Override action failed");
 
       // Automatically archive after authorization
-      await fetch(
-        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${docId}/archive`,
-        {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      await fetch(`http://localhost:8000/api/v1/documents/${docId}/archive`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       showToast("Administrative override & archiving complete");
       setTimeout(() => navigate("/admin"), 1000);

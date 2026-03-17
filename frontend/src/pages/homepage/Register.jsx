@@ -32,7 +32,7 @@ export default function Register({ navigate }) {
       }
 
       const response = await fetch(
-        "https://dlm-gen-ai-production.up.railway.app/api/v1/auth/register",
+        "http://localhost:8000/api/v1/auth/register",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

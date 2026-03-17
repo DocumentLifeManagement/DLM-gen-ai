@@ -80,6 +80,9 @@ async def reject_document(
     db: Session = Depends(get_db),
     user=Depends(require_role(["APPROVER", "REVIEWER", "ADMIN"]))
 ):
+    role = user.get("role")
+    to_state = payload.get("to_state", "REJECTED")
+    
     result = LifecycleService.transition(
         db=db,
         document_id=document_id,
@@ -92,6 +95,12 @@ async def reject_document(
         reviewer_notes=payload.get("notes") if role == "REVIEWER" else None,
         bypass_rules=role == "ADMIN"
     )
-    # Unblock the "Approve/Reject" Receive Task with approved=false for the gateway
-    await _publish("Message_Approval_Done", document_id, variables={"approved": False})
+    
+    # Unblock the appropriate Zeebe task based on role
+    if role == "REVIEWER":
+        await _publish("Message_Review_Done", document_id, variables={"approved": False})
+    else:
+        # For APPROVER or ADMIN rejecting/returning
+        await _publish("Message_Approval_Done", document_id, variables={"approved": False})
+        
     return result
