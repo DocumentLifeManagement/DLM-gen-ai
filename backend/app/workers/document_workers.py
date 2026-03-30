@@ -49,12 +49,26 @@ if zeebe_worker:
                 lines = extract_lines(blocks)
                 tables = extract_tables(blocks)
                 
+                full_text = "\n".join([line.get("text", "") for line in lines if line.get("text")])
+                
                 doc = db.query(Document).filter(Document.id == _doc_id).first()
                 if doc:
                     doc.status = "EXTRACTED"
+                    doc.full_text = full_text
                 
                 # Note: further save logic for KeyValue and Table models could go here
                 db.commit()
+
+                # Generate Embeddings
+                if doc and full_text:
+                    from app.services.embedding_service import embedding_service
+                    role_access = ["REVIEWER", "APPROVER"]
+                    embedding_service.embed_and_store(
+                        document_id=_doc_id,
+                        text=full_text,
+                        role_access=role_access,
+                        status=doc.status
+                    )
             except Exception as e:
                 db.rollback()
                 raise e

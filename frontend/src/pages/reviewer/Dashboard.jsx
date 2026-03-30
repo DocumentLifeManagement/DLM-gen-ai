@@ -67,6 +67,8 @@ export default function ReviewerDashboard({ navigate }) {
   const [error, setError] = useState(null);
 
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [loadingSearch, setLoadingSearch] = useState(false);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [activeTab, setActiveTab] = useState("active");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -87,12 +89,9 @@ export default function ReviewerDashboard({ navigate }) {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(
-        "https://dlm-gen-ai-production.up.railway.app/api/v1/documents",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const res = await fetch("http://localhost:8000/api/v1/documents", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!res.ok) throw new Error("Failed to fetch documents");
 
@@ -138,6 +137,32 @@ export default function ReviewerDashboard({ navigate }) {
     setFilteredDocs(temp);
   };
 
+  const handleSemanticSearch = async (e) => {
+    e.preventDefault();
+    if (!search.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    setLoadingSearch(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      // Use local backend URL for testing, fallback to railway
+      const API_URL =
+        import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+      const res = await fetch(
+        `${API_URL}/search?query=${encodeURIComponent(search)}&role=REVIEWER`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) throw new Error("Semantic search failed");
+      const data = await res.json();
+      setSearchResults(data);
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      setLoadingSearch(false);
+    }
+  };
+
   const handleApprove = async (id, e) => {
     e.stopPropagation(); // Prevent row click
 
@@ -151,7 +176,7 @@ export default function ReviewerDashboard({ navigate }) {
 
     try {
       const res = await fetch(
-        `https://dlm-gen-ai-production.up.railway.app/api/v1/documents/${id}/review`,
+        `http://localhost:8000/api/v1/documents/${id}/review`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -271,19 +296,32 @@ export default function ReviewerDashboard({ navigate }) {
 
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-center">
-        <div className="relative flex-1 w-full md:max-w-md">
+        <form
+          onSubmit={handleSemanticSearch}
+          className="relative flex-1 w-full md:max-w-md"
+        >
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
             size={18}
           />
           <input
             type="text"
-            placeholder="Search documents by name or ID..."
+            placeholder="Semantic Search (e.g. invoice above 500)..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-brand-accent transition-colors"
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (!e.target.value) setSearchResults(null);
+            }}
+            className="w-full bg-brand-900/50 border border-brand-800 text-white rounded-lg pl-10 pr-24 py-2.5 focus:outline-none focus:border-brand-accent transition-colors"
           />
-        </div>
+          <button
+            type="submit"
+            disabled={loadingSearch}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-brand-accent/20 hover:bg-brand-accent/40 text-brand-accent px-3 py-1 rounded text-xs font-bold transition-colors disabled:opacity-50"
+          >
+            {loadingSearch ? "Searching..." : "Search"}
+          </button>
+        </form>
 
         <div className="flex gap-4 w-full md:w-auto">
           {activeTab === "active" && (
@@ -336,7 +374,7 @@ export default function ReviewerDashboard({ navigate }) {
           <div className="col-span-6 md:col-span-2 text-right">Actions</div>
         </div>
 
-        {loading ? (
+        {loadingSearch || loading ? (
           <div className="p-8 space-y-4">
             {[...Array(5)].map((_, i) => (
               <div
@@ -344,6 +382,78 @@ export default function ReviewerDashboard({ navigate }) {
                 className="h-16 bg-brand-800/30 animate-pulse rounded-lg"
               />
             ))}
+          </div>
+        ) : searchResults ? (
+          <div className="divide-y divide-brand-800">
+            {searchResults.length === 0 ? (
+              <div className="p-12 text-center text-slate-500">
+                No semantic matches found for your query.
+              </div>
+            ) : (
+              searchResults.map((res) => (
+                <div
+                  key={res.document_id}
+                  className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-brand-800/30 transition-colors group cursor-pointer"
+                  onClick={() =>
+                    navigate(`/reviewer/document/${res.document_id}`)
+                  }
+                >
+                  <div className="col-span-12 md:col-span-3 font-medium text-white flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-brand-accent/10 text-brand-accent">
+                      <FileText size={20} />
+                    </div>
+                    <div className="truncate">
+                      <p className="truncate text-sm md:text-base text-white">
+                        {res.filename || `Document #${res.document_id}`}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[10px] text-slate-500 font-mono">
+                          Score: {(res.relevance_score * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-span-12 md:col-span-5 text-sm font-mono text-slate-300 truncate">
+                    <div
+                      className="p-2 bg-brand-950/50 rounded border border-brand-800 truncate"
+                      title={res.matched_text}
+                    >
+                      {res.matched_text}
+                    </div>
+                  </div>
+                  <div className="col-span-6 md:col-span-2 flex justify-center">
+                    <span
+                      className={`text-[9px] md:text-[10px] px-3 py-1 rounded-full border font-black uppercase tracking-tight whitespace-nowrap ${statusBadge(res.status)}`}
+                    >
+                      {res.status ? res.status.replace("_", " ") : "INGESTED"}
+                    </span>
+                  </div>
+                  <div
+                    className="col-span-6 md:col-span-2 flex justify-end gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() =>
+                        navigate(`/reviewer/document/${res.document_id}`)
+                      }
+                      className="p-2 text-slate-400 hover:text-white hover:bg-brand-800 rounded-lg transition-colors"
+                      title="Review"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    {res.status === "REVIEW_PENDING" && (
+                      <button
+                        onClick={(e) => handleApprove(res.document_id, e)}
+                        className="p-2 text-slate-400 hover:text-green-400 hover:bg-green-900/30 rounded-lg transition-colors"
+                        title="Quick Approve"
+                      >
+                        <Check size={18} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         ) : (
           <div className="divide-y divide-brand-800">
