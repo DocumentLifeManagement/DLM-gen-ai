@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 import boto3
 import os
 from app.core.database import get_db
+from app.core.rbac import require_role
 from app.models.document import Document, KeyValue, Table, TableCell, TextractJob, TextractRaw
 from app.models.document_lifecycle import DocumentLifecycle
 
@@ -123,19 +124,51 @@ def list_documents(
     ]
 
 @router.put("/{document_id}/update-fields")
-def update_fields(document_id: int, payload: dict, db: Session = Depends(get_db)):
+def update_fields(
+    document_id: int, 
+    payload: dict, 
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_role(["REVIEWER", "APPROVER", "ADMIN"]))
+):
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    if doc.status in ["APPROVAL_PENDING", "APPROVED", "REJECTED", "ARCHIVED"]:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Fields cannot be updated while document is in {doc.status} state."
+        )
+
+    changed = False
     # Update granular fields
     for field in payload.get("fields", []):
         kv = db.query(KeyValue).filter(
             KeyValue.document_id == document_id,
-            KeyValue.key_text == field["key"]
+            KeyValue.id == field.get("id")
         ).first()
         if kv:
-            kv.value_text = field["value"]
+            new_key = field.get("key", kv.key_text)
+            new_val = field.get("value", kv.value_text)
+            if kv.key_text != new_key or kv.value_text != new_val:
+                changed = True
+            kv.key_text = new_key
+            kv.value_text = new_val
+
+    if changed:
+        from datetime import datetime
+        log = DocumentLifecycle(
+            document_id=document_id,
+            from_state=doc.status,
+            to_state=doc.status,
+            actor_type="USER",
+            actor_id=user.get("sub"),
+            actor_name=user.get("name"),
+            actor_email=user.get("sub"),
+            notes="Updated extracted fields",
+            timestamp=datetime.utcnow()
+        )
+        db.add(log)
 
     try:
         db.commit()

@@ -112,9 +112,9 @@ export default function ReviewDocument({ navigate, id }) {
     }
   };
 
-  const handleFieldChange = (index, value) => {
+  const handleFieldChange = (index, property, value) => {
     const updated = [...fields];
-    updated[index].value = value;
+    updated[index][property] = value;
     setFields(updated);
     setIsDirty(true);
   };
@@ -258,6 +258,8 @@ export default function ReviewDocument({ navigate, id }) {
       (fields.length || 1)) *
     100
   ).toFixed(1);
+
+  const isEditable = documentData && !["APPROVAL_PENDING", "APPROVED", "REJECTED", "ARCHIVED"].includes(documentData.status);
 
   return (
     <DashboardLayout
@@ -420,21 +422,34 @@ export default function ReviewDocument({ navigate, id }) {
                     className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"
                   >
                     {fields.map((field, idx) => (
-                      <div key={idx} className="space-y-2 group">
-                        <div className="flex justify-between items-center opacity-60 group-hover:opacity-100 transition-opacity">
-                          <label className="text-[9px] text-brand-accent font-black uppercase tracking-widest">
-                            {field.key}
-                          </label>
+                      <div key={idx} className="space-y-1.5 group p-2 hover:bg-brand-950/20 rounded-xl transition-all border border-transparent hover:border-brand-800/50">
+                        <div className="flex justify-between items-center opacity-60 group-hover:opacity-100 transition-opacity px-1 mb-1">
+                          <input
+                            title="Edit field name"
+                            value={field.key}
+                            disabled={!isEditable}
+                            onChange={(e) =>
+                              handleFieldChange(idx, "key", e.target.value)
+                            }
+                            className={clsx(
+                              "bg-transparent text-[10px] text-brand-accent font-black uppercase tracking-widest outline-none border-b border-transparent w-2/3 transition-all",
+                              isEditable ? "hover:border-brand-accent/50 focus:border-brand-accent" : "cursor-not-allowed opacity-60"
+                            )}
+                          />
                           <span className="text-[8px] text-slate-600 font-mono">
                             {(field.confidence * 100).toFixed(0)}%
                           </span>
                         </div>
                         <input
                           value={field.value}
+                          disabled={!isEditable}
                           onChange={(e) =>
-                            handleFieldChange(idx, e.target.value)
+                            handleFieldChange(idx, "value", e.target.value)
                           }
-                          className="w-full bg-brand-950/30 border border-brand-800 hover:border-brand-700 focus:border-brand-accent py-2.5 px-4 rounded-xl text-xs text-white outline-none transition-all"
+                          className={clsx(
+                            "w-full bg-brand-950/30 border border-brand-800 focus:border-brand-accent py-2.5 px-4 rounded-xl text-xs text-white outline-none transition-all shadow-inner",
+                            isEditable ? "hover:border-brand-700" : "cursor-not-allowed opacity-60"
+                          )}
                         />
                       </div>
                     ))}
@@ -513,7 +528,9 @@ export default function ReviewDocument({ navigate, id }) {
                                 <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">
                                   {entry.from === "NONE"
                                     ? "Initial Document Inflow"
-                                    : `${entry.from} → ${entry.to}`}
+                                    : entry.from === entry.to 
+                                      ? "Metadata Update" 
+                                      : `${entry.from} → ${entry.to}`}
                                 </span>
                                 <div className="flex justify-between items-center mb-2">
                                   <span className="text-[10px] text-white font-bold">
@@ -720,20 +737,22 @@ export default function ReviewDocument({ navigate, id }) {
                 <div
                   className={clsx(
                     "w-2 h-2 rounded-full",
-                    isDirty ? "bg-orange-500 animate-pulse" : "bg-emerald-500",
+                    !isEditable ? "bg-slate-700" : isDirty ? "bg-orange-500 animate-pulse" : "bg-emerald-500",
                   )}
                 />
-                {isDirty ? "Cache Mismatch" : "Records Synced"}
+                {!isEditable ? "Records Locked (Read Only)" : isDirty ? "Cache Mismatch" : "Records Synced"}
               </div>
               <button
                 onClick={() => handleSaveChanges()}
                 className={clsx(
                   "flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                  isDirty
-                    ? "text-brand-accent hover:opacity-80"
-                    : "text-slate-800 cursor-default",
+                  !isEditable
+                    ? "text-slate-700 cursor-not-allowed hidden"
+                    : isDirty
+                      ? "text-brand-accent hover:opacity-80"
+                      : "text-slate-800 cursor-default",
                 )}
-                disabled={!isDirty || saving}
+                disabled={!isEditable || !isDirty || saving}
               >
                 <Save size={14} /> Commit Sync
               </button>
