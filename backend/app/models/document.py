@@ -20,6 +20,7 @@ class Document(Base):
     tag = Column(String, nullable=True)                          # document classification tag
     
     # New Review/Approval fields
+    full_text = Column(Text, nullable=True)
     reviewer_notes = Column(Text, nullable=True)
     approver_notes = Column(Text, nullable=True)
     uploader_notes = Column(Text, nullable=True)  # notes from the document uploader
