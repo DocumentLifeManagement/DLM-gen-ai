@@ -259,7 +259,11 @@ export default function ReviewDocument({ navigate, id }) {
     100
   ).toFixed(1);
 
-  const isEditable = documentData && !["APPROVAL_PENDING", "APPROVED", "REJECTED", "ARCHIVED"].includes(documentData.status);
+  const isEditable =
+    documentData &&
+    !["APPROVAL_PENDING", "APPROVED", "REJECTED", "ARCHIVED"].includes(
+      documentData.status,
+    );
 
   return (
     <DashboardLayout
@@ -422,7 +426,10 @@ export default function ReviewDocument({ navigate, id }) {
                     className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"
                   >
                     {fields.map((field, idx) => (
-                      <div key={idx} className="space-y-1.5 group p-2 hover:bg-brand-950/20 rounded-xl transition-all border border-transparent hover:border-brand-800/50">
+                      <div
+                        key={idx}
+                        className="space-y-1.5 group p-2 hover:bg-brand-950/20 rounded-xl transition-all border border-transparent hover:border-brand-800/50"
+                      >
                         <div className="flex justify-between items-center opacity-60 group-hover:opacity-100 transition-opacity px-1 mb-1">
                           <input
                             title="Edit field name"
@@ -433,7 +440,9 @@ export default function ReviewDocument({ navigate, id }) {
                             }
                             className={clsx(
                               "bg-transparent text-[10px] text-brand-accent font-black uppercase tracking-widest outline-none border-b border-transparent w-2/3 transition-all",
-                              isEditable ? "hover:border-brand-accent/50 focus:border-brand-accent" : "cursor-not-allowed opacity-60"
+                              isEditable
+                                ? "hover:border-brand-accent/50 focus:border-brand-accent"
+                                : "cursor-not-allowed opacity-60",
                             )}
                           />
                           <span className="text-[8px] text-slate-600 font-mono">
@@ -448,7 +457,9 @@ export default function ReviewDocument({ navigate, id }) {
                           }
                           className={clsx(
                             "w-full bg-brand-950/30 border border-brand-800 focus:border-brand-accent py-2.5 px-4 rounded-xl text-xs text-white outline-none transition-all shadow-inner",
-                            isEditable ? "hover:border-brand-700" : "cursor-not-allowed opacity-60"
+                            isEditable
+                              ? "hover:border-brand-700"
+                              : "cursor-not-allowed opacity-60",
                           )}
                         />
                       </div>
@@ -528,8 +539,8 @@ export default function ReviewDocument({ navigate, id }) {
                                 <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">
                                   {entry.from === "NONE"
                                     ? "Initial Document Inflow"
-                                    : entry.from === entry.to 
-                                      ? "Metadata Update" 
+                                    : entry.from === entry.to
+                                      ? "Metadata Update"
                                       : `${entry.from} → ${entry.to}`}
                                 </span>
                                 <div className="flex justify-between items-center mb-2">
@@ -721,7 +732,7 @@ export default function ReviewDocument({ navigate, id }) {
               <div className="p-6 bg-brand-900/30 border border-brand-800 rounded-2xl">
                 <div className="flex items-center gap-3 mb-2">
                   <ShieldCheck size={18} className="text-brand-accent" />
-                  <h4 className="text-xs font-black text-white uppercase uppercase">
+                  <h4 className="text-xs font-black text-white uppercase">
                     Verification Mode
                   </h4>
                 </div>
@@ -737,10 +748,18 @@ export default function ReviewDocument({ navigate, id }) {
                 <div
                   className={clsx(
                     "w-2 h-2 rounded-full",
-                    !isEditable ? "bg-slate-700" : isDirty ? "bg-orange-500 animate-pulse" : "bg-emerald-500",
+                    !isEditable
+                      ? "bg-slate-700"
+                      : isDirty
+                        ? "bg-orange-500 animate-pulse"
+                        : "bg-emerald-500",
                   )}
                 />
-                {!isEditable ? "Records Locked (Read Only)" : isDirty ? "Cache Mismatch" : "Records Synced"}
+                {!isEditable
+                  ? "Records Locked (Read Only)"
+                  : isDirty
+                    ? "Cache Mismatch"
+                    : "Records Synced"}
               </div>
               <button
                 onClick={() => handleSaveChanges()}

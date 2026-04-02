@@ -56,6 +56,7 @@ import {
   ChevronRight,
   SlidersHorizontal,
   AlertCircle,
+  RefreshCcw,
 } from "lucide-react";
 
 export default function ReviewerDashboard({ navigate }) {
@@ -323,7 +324,16 @@ export default function ReviewerDashboard({ navigate }) {
           </button>
         </form>
 
-        <div className="flex gap-4 w-full md:w-auto">
+        <div className="flex gap-4 w-full md:w-auto items-center">
+          <button
+            onClick={fetchDocuments}
+            disabled={loading || loadingSearch}
+            className="p-2.5 bg-brand-900/50 hover:bg-brand-900 border border-brand-800 rounded-lg text-slate-400 hover:text-brand-accent hover:border-brand-accent transition-all shrink-0"
+            title="Refresh Documents"
+          >
+            <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
+          </button>
+          
           {activeTab === "active" && (
             <div className="relative flex-1 md:flex-none">
               <Filter
