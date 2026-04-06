@@ -1,6 +1,8 @@
 ﻿# Document Lifecycle Management Agent using Generative AI
 
+
 ## Overview
+
 
 This project implements an autonomous agent designed to manage the complete lifecycle of business documents, such as invoices and contracts, with minimal human intervention. The solution integrates Intelligent Document Processing (IDP) for data extraction, a BPMN engine for workflow orchestration, and Retrieval-Augmented Generation (RAG) for policy-grounded AI document content. The primary aim is to reduce cycle times, improve data accuracy, and ensure auditability and compliance across the document lifecycle—from ingestion through approval to archiving.
 
