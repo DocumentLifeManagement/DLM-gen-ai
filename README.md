@@ -1,96 +1,156 @@
-﻿# Document Lifecycle Management Agent using Generative AI
+# Document Lifecycle Management Agent using Generative AI
 
+## 🚀 Overview
 
-## Overview
+This project implements an autonomous agent designed to manage the complete lifecycle of business documents (e.g., invoices, contracts, receipts) with minimal human intervention. By integrating **Intelligent Document Processing (IDP)**, **BPMN Workflow Orchestration**, and **Retrieval-Augmented Generation (RAG)**, the system ensures high data accuracy, rapid cycle times, and robust compliance.
 
+The solution automates everything from ingestion and OCR-based data extraction to policy-grounded approval workflows and eventual archiving, providing a seamless "Human-in-the-loop" experience.
 
-This project implements an autonomous agent designed to manage the complete lifecycle of business documents, such as invoices and contracts, with minimal human intervention. The solution integrates Intelligent Document Processing (IDP) for data extraction, a BPMN engine for workflow orchestration, and Retrieval-Augmented Generation (RAG) for policy-grounded AI document content. The primary aim is to reduce cycle times, improve data accuracy, and ensure auditability and compliance across the document lifecycle—from ingestion through approval to archiving.
+---
 
-The system integrates OCR-based Intelligent Document Processing with confidence-driven validation, a Retrieval-Augmented Generation pipeline for policy-grounded document creation, and BPMN 2.0 workflow orchestration to autonomously manage the complete document lifecycle with RBAC, audit logging, and compliance enforcement.
+## ✨ Key Features
 
-## Features
+- **Autonomous Orchestration**: Powered by **Camunda 8 (Zeebe)**, workflows are dynamically routed based on extraction confidence and business logic.
+- **Intelligent Extraction (IDP)**: Uses **AWS Textract** for advanced OCR, extracting Key-Value pairs, tables, and raw text with granular confidence scoring.
+- **RAG-Enabled Repository**: Automatically generates embeddings for uploaded documents, allowing for policy-grounded AI summaries and natural language queries.
+- **Granular RBAC**: Role-based dashboards for **Uploaders**, **Reviewers**, **Approvers**, and **Admins**.
+- **Immutable Audit Trail**: Tracks every state transition and user interaction in a detailed `DocumentLifecycle` log.
+- **Digital Signatures**: Built-in support for digital signing during the approval phase.
+- **System Integrity**: Includes soft-delete (Bin) and permanent purge functionality with automated S3 and database cleanup.
 
-- **Automated Ingestion:** Supports email, API, and manual uploads for documents.
-- **Intelligent Data Extraction:** OCR and NLP-based field recognition with multi-language support and confidence scoring. Human-in-the-loop correction for low-confidence data.
-- **Document Generation:** Produces compliant DOCX, HTML, and PDF files using templates and RAG-powered AI for dynamic content grounded in internal policies.
-- **BPMN-Orchestrated Workflows:** Flexible, auditable workflows for approvals, escalations, and exception handling.
-- **Governance & Compliance:** Implements Role-Based Access Control (RBAC), retention policies, versioning, and immutable audit trails.
-- **System Integration:** Connects to ERP/CRM platforms and document repositories for end-to-end automation.
+---
 
-## Technology Stack
+## 🛠️ Technology Stack
 
-- **Workflow/Orchestration:** BPMN 2.0 engine (e.g., Camunda 8)
-- **IDP:** OCR engine (Tesseract or Google Vision), NLP libraries (spaCy, transformers)
-- **Document Generation:** docxtpl for DOCX, Jinja2 for HTML, ReportLab for PDFs
-- **Retrieval-Augmented Generation:** Pinecone or FAISS for vector database, OpenAI/Gemini LLM APIs
-- **Governance:** Keycloak or Camunda for RBAC & audit logs
-- **Frontend:** ReactJS
-- **APIs:** FastAPI
-- **Storage:** PostgreSQL, AWS S3/Azure Blob
-- **Testing:** Pytest/unittest (backend), Cypress/Jest (frontend)
+### Backend (Python/FastAPI)
 
-## System Architecture
+- **Framework**: [FastAPI](https://fastapi.tiangolo.com/) for high-performance async APIs.
+- **Orchestration**: [Camunda 8 (Zeebe)](https://camunda.com/products/camunda-8/) for BPMN 2.0 workflow execution.
+- **IDP/OCR**: [AWS Textract](https://aws.amazon.com/textract/) & [Boto3](https://aws.amazon.com/sdk-for-python/).
+- **Database**: [PostgreSQL](https://www.postgresql.org/) with [SQLAlchemy](https://www.sqlalchemy.org/) ORM and [Alembic](https://alembic.sqlalchemy.org/) for migrations.
+- **Task Scheduling**: [APScheduler](https://apscheduler.readthedocs.io/) for background maintenance and polling.
+- **AI/LLM**: Groq LLM for summarization and Sentence Transformers for RAG embeddings.
 
+### Frontend (React/Vite)
+
+- **Build Tool**: [Vite](https://vitejs.dev/) for a lightning-fast dev experience.
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) for responsive, modern UI.
+- **Icons & Motion**: [Lucide React](https://lucide.dev/) and [Framer Motion](https://www.framer.com/motion/) for interactive micro-animations.
+- **Routing**: Custom React-based router with RBAC path protection.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    User((User/Client)) -->|Upload| API[FastAPI Backend]
+    API -->|Start Instance| Zeebe[Camunda 8 Zeebe]
+
+    subgraph "Worker Layer"
+        Zeebe -->|Task: Extract| W1[Textract Worker]
+        Zeebe -->|Task: Archive| W2[Archive Worker]
+    end
+
+    W1 -->|OCR Results| S3[(AWS S3)]
+    W1 -->|DB Records| DB[(PostgreSQL)]
+    W1 -->|Embeddings| VS[(Vector Store)]
+
+    API -->|RAG Query| VS
+
+    subgraph "Frontend Roles"
+        U[Uploader]
+        R[Reviewer]
+        A[Approver]
+        AD[Admin]
+    end
+
+    User --- Frontend
+    Frontend --- U & R & A & AD
 ```
-Ingestion Layer --> IDP Layer --> Generation Layer
-                           |             |
-                BPMN Orchestration Layer
-                           |
-                    Governance Layer
-```
 
-- **Ingestion:** Receives documents via UI, email, or API.
-- **IDP:** Classifies & extracts data with confidence scoring and triggers human validation as needed.
-- **Generation:** Produces document output grounded in company policy using RAG.
-- **Orchestration:** Routes workflows, manages human tasks, enforces business rules, and integrates with external systems.
-- **Governance:** Security, RBAC, audit trails, retention, versioning.[1][2][3]
+---
 
-## Quick Setup
+## 🚦 Getting Started
 
-1. **Clone the Repository:**
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- PostgreSQL Instance
+- AWS Account (S3 & Textract access)
+- Camunda 8 (SaaS or Self-Managed)
+
+### Backend Setup
+
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
    ```
-   git clone <repository-url>
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
    ```
-2. **Install Project Dependencies:**
-   - Backend: `cd backend/` and run `pip install -r requirements.txt`
-   - Frontend: `cd frontend/` and run `npm install`
-3. **Set Up Environment Variables:**
-   - Add API keys and database credentials to `.env` as needed.
-4. **Run Database Migrations:**
-   - For PostgreSQL, use migration tools (e.g., Alembic, Django ORM).
-5. **Launch Services:**
-   - Backend: `python app.py` (or relevant start command)
-   - Frontend: `npm start` (in command prompt)
-   - Workflow Engine and Supporting Services as per documentation.
+3. Configure your `.env` file (see `.env.example` if available):
+   ```env
+   DATABASE_URL=postgresql://user:pass@localhost/dbname
+   AWS_ACCESS_KEY_ID=your_key
+   AWS_SECRET_ACCESS_KEY=your_secret
+   AWS_REGION=ap-south-1
+   ZEEBE_ADDRESS=your_camunda_address
+   ```
+4. Run migrations/initialization:
+   ```bash
+   python create_tables.py
+   ```
+5. Start the server:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
-## Running Tests
+### Frontend Setup
 
-- **Backend:** `pytest`
-- **Frontend:** `npm test`
-- **End-to-End:** Use provided sample datasets and test scripts.[2]
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the Vite development server:
+   ```bash
+   npm run dev
+   ```
 
-## Contributing
+---
 
-- Open issues for bugs or enhancements.
-- Fork the repo and submit pull requests for review.
-- Follow code style and documentation guidelines (see `CONTRIBUTING.md` if present).[1][2]
+## 📖 API Documentation
 
-## Project Timeline & Milestones
+Once the backend is running, you can access the interactive API docs at:
 
-- Week 1-2: Requirements & Modeling (DFD/BPMN)
-- Week 3-5: IDP Pipeline Protoype
-- Week 4-6: Template Generation, RAG Setup
-- Week 6-8: BPMN Approval Flows, First Integration
-- Week 8-10: Governance Features (RBAC, audit, retention)
-- Week 10-14: Testing, Documentation, UAT & Release[3][2][1]
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
 
-## License
+### Core Endpoints
 
-This project is licensed under the MIT License.
+- `POST /api/v1/uploader/upload`: Ingest documents and trigger workflows.
+- `GET /api/v1/documents`: List documents with category and status filters.
+- `PUT /api/v1/documents/{id}/update-fields`: Reviewer data correction.
+- `POST /api/v1/reviewer/approve`: Transition document to approval stage.
+- `POST /api/v1/approver/approve`: Final approval and digital signature.
 
-**For further details, please refer to the project documents and architecture diagrams included with the repository.**[2][3][1]
+---
 
-[1](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/collection_94140303-bb4a-4426-87da-cb24a2b434c7/5d1e8e99-792a-4c84-8a84-489b2f64ae9d/Project-Synopsis.docx)
-[2](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/collection_94140303-bb4a-4426-87da-cb24a2b434c7/4a974c39-bb24-4224-b141-d2dbc2ac4727/Project-Report.pdf)
-[3](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/collection_94140303-bb4a-4426-87da-cb24a2b434c7/e9685f82-9f3d-42d2-bd81-9de71e71a23a/project-review-2-ppt.pptx)
+## 🛡️ Governance & Compliance
 
+- **Audit Logs**: Every action is timestamped and attributed to a user role.
+- **Soft Deletion**: Documents moved to the Bin are retained before permanent purging.
+- **S3 Integrity**: Automatic syncing between database deletion and S3 object removal.
+- **RBAC**: dashboard access is strictly enforced based on local storage mock-auth (extendable to OAuth2/JWT).
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
