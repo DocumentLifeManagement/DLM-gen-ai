@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import ingestion, idp, generation, lifecycle, governance, auth, documents, users, search
+from app.api.v1 import ingestion, idp, generation, lifecycle, auth, documents, users, search
 
 api_router = APIRouter()
 
