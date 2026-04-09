@@ -856,24 +856,21 @@ export default function UploaderDashboard({ navigate }) {
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-10 h-10 border-4 border-brand-accent border-t-transparent rounded-full animate-spin" />
                     </div>
+                  ) : previewDoc.filename?.match(/\.(jpeg|jpg|gif|png|webp|bmp)$/i) ? (
+                    <img
+                      src={previewDoc.s3_url}
+                      className="w-full h-full object-contain bg-white"
+                      alt="Preview"
+                    />
                   ) : (
                     <iframe
                       src={`${previewDoc.s3_url}#toolbar=0`}
-                      className="w-full h-full"
+                      className="w-full h-full bg-white"
                     />
                   )}
                 </div>
                 <div className="flex-1 space-y-4 md:space-y-6 overflow-y-auto custom-scrollbar max-h-[40vh] lg:max-h-none">
-                  {previewDoc.uploader_message && (
-                    <div className="p-6 bg-rose-500/5 border border-rose-500/10 rounded-2xl">
-                      <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <MessageSquare size={14} /> Reviewer Feedback
-                      </h4>
-                      <div className="p-4 bg-brand-950/60 rounded-xl border border-rose-500/10 italic text-[11px] text-slate-300 leading-relaxed shadow-inner">
-                        "{previewDoc.uploader_message}"
-                      </div>
-                    </div>
-                  )}
+
 
                   <div className="p-6 bg-brand-accent/5 border border-brand-accent/10 rounded-2xl">
                     <h4 className="text-[10px] font-black text-brand-accent uppercase tracking-[0.2em] mb-4 flex items-center gap-2">

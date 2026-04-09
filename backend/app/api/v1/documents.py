@@ -24,6 +24,13 @@ def get_document(document_id: int, db: Session = Depends(get_db)):
 
     kvs = db.query(KeyValue).filter(KeyValue.document_id == document_id).all()
 
+    import mimetypes
+    content_type = doc.mime_type
+    if not content_type:
+        content_type, _ = mimetypes.guess_type(doc.filename)
+    if not content_type:
+        content_type = 'application/pdf'
+
     # Generate presigned URL for viewing
     try:
         presigned_url = s3_client.generate_presigned_url(
@@ -32,7 +39,7 @@ def get_document(document_id: int, db: Session = Depends(get_db)):
                 'Bucket': doc.s3_bucket, 
                 'Key': doc.s3_key,
                 'ResponseContentDisposition': 'inline',
-                'ResponseContentType': 'application/pdf'
+                'ResponseContentType': content_type
             },
             ExpiresIn=3600 # 1 hour
         )

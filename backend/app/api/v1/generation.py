@@ -36,8 +36,9 @@ def generate_summary(document_id: int, db: Session = Depends(get_db)):
 
     # 4. Construct prompt
     prompt = (
-        "Summarize the following document in a concise and professional way. "
-        "Extract key details like vendor, amount, date, and purpose.\n\n"
+        "Identify the type of document and provide a concise, professional summary. "
+        "Extract the most significant pieces of information found in the data, including primary entities, "
+        "dates, and the core purpose or action required.\n\n"
         f"Document Data:\n{structured_data}"
     )
 
