@@ -42,6 +42,7 @@ import {
   UserCheck,
   Check,
   Sparkles,
+  MessageSquare,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
@@ -57,8 +58,6 @@ export default function ReviewDocument({ navigate, id }) {
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [notes, setNotes] = useState("");
-  const [uploaderMessage, setUploaderMessage] = useState("");
-  const [digitallySigned, setDigitallySigned] = useState(false);
   const [activeTab, setActiveTab] = useState("metadata"); // metadata | audit
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [lifecycle, setLifecycle] = useState([]);
@@ -154,14 +153,6 @@ export default function ReviewDocument({ navigate, id }) {
   };
 
   const handleDecision = async (decisionType) => {
-    if (
-      decisionType === "APPROVE" &&
-      userRole === "approver" &&
-      !digitallySigned
-    ) {
-      showToast("Digital signature required for final approval", "error");
-      return;
-    }
 
     if (isDirty) {
       const saved = await handleSaveChanges(true);
@@ -174,11 +165,10 @@ export default function ReviewDocument({ navigate, id }) {
       const docId = parseInt(id);
 
       let endpoint = "review";
-      let payload = { notes, uploader_message: uploaderMessage };
+      let payload = { notes };
 
       if (decisionType === "APPROVE") {
         endpoint = userRole === "approver" ? "approve" : "review";
-        payload.digitally_signed = digitallySigned;
       } else if (decisionType === "REJECT") {
         endpoint = "reject";
         payload.to_state = "REJECTED";
@@ -351,6 +341,17 @@ export default function ReviewDocument({ navigate, id }) {
           </div>
         </div>
 
+        {documentData.uploader_notes && (
+          <div className="p-4 bg-brand-900 border border-brand-800 rounded-xl">
+            <h4 className="text-[10px] font-black text-brand-cyan uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+              <MessageSquare size={14} /> Uploader Message
+            </h4>
+            <div className="p-3 bg-brand-950/60 rounded-lg text-xs text-slate-300 italic shadow-inner">
+              "{documentData.uploader_notes}"
+            </div>
+          </div>
+        )}
+
         {/* Row 2: Split View - stacks on mobile, side by side on large screens */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[400px] lg:h-[500px]">
           {/* Evidence Panel */}
@@ -367,12 +368,20 @@ export default function ReviewDocument({ navigate, id }) {
                 <Maximize2 size={14} />
               </button>
             </div>
-            <div className="flex-1 bg-brand-950/80 p-2">
-              <iframe
-                src={`${documentData.s3_url}#toolbar=0`}
-                className="w-full h-full border-none rounded-lg opacity-90 group-hover:opacity-100 transition-opacity"
-                title="Evidence"
-              />
+            <div className="flex-1 bg-brand-950/80 p-2 overflow-hidden flex items-center justify-center">
+              {documentData.filename?.match(/\.(jpeg|jpg|gif|png|webp|bmp)$/i) ? (
+                <img
+                  src={documentData.s3_url}
+                  alt="Evidence Preview"
+                  className="w-full h-full object-contain rounded-lg opacity-90 group-hover:opacity-100 transition-opacity bg-white"
+                />
+              ) : (
+                <iframe
+                  src={`${documentData.s3_url}#toolbar=0`}
+                  className="w-full h-full border-none rounded-lg opacity-90 group-hover:opacity-100 transition-opacity bg-white"
+                  title="Evidence"
+                />
+              )}
             </div>
           </div>
 
@@ -668,67 +677,9 @@ export default function ReviewDocument({ navigate, id }) {
                 className="w-full bg-brand-900/50 border border-brand-800 focus:border-brand-accent rounded-xl p-4 text-xs text-white outline-none min-h-[80px] transition-all resize-none shadow-inner"
               />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-black text-brand-cyan uppercase tracking-widest flex items-center gap-1.5">
-                  <Send size={9} /> Message to Uploader
-                </label>
-                <span className="text-[9px] text-slate-600 font-mono">
-                  Optional feedback
-                </span>
-              </div>
-              <textarea
-                value={uploaderMessage}
-                onChange={(e) => setUploaderMessage(e.target.value)}
-                placeholder="Leave feedback for the document uploader (e.g. missing pages, wrong format)..."
-                className="w-full bg-brand-950/60 border border-brand-cyan/20 focus:border-brand-cyan rounded-xl p-4 text-xs text-white outline-none min-h-[70px] transition-all resize-none shadow-inner"
-              />
-            </div>
           </div>
 
           <div className="w-full md:w-[400px] flex flex-col justify-between py-1">
-            {userRole === "approver" ? (
-              <div
-                onClick={() => setDigitallySigned(!digitallySigned)}
-                className={clsx(
-                  "group cursor-pointer flex items-center justify-between p-6 rounded-2xl border transition-all duration-300",
-                  digitallySigned
-                    ? "bg-brand-accent/10 border-brand-accent/40 shadow-[0_0_20px_rgba(var(--brand-accent-rgb),0.1)]"
-                    : "bg-brand-900/50 border-brand-800 hover:border-brand-700",
-                )}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={clsx(
-                      "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
-                      digitallySigned
-                        ? "bg-brand-accent text-white"
-                        : "bg-brand-800 text-slate-600 group-hover:text-slate-400",
-                    )}
-                  >
-                    <UserCheck size={24} />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-black text-white uppercase tracking-tight">
-                      Apply Digital Identity
-                    </h4>
-                    <p className="text-[10px] text-slate-500 font-medium leading-tight">
-                      Certifying data integrity & compliance.
-                    </p>
-                  </div>
-                </div>
-                <div
-                  className={clsx(
-                    "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-                    digitallySigned
-                      ? "bg-brand-accent border-brand-accent text-white"
-                      : "border-brand-700 bg-brand-950",
-                  )}
-                >
-                  {digitallySigned && <Check size={14} strokeWidth={3} />}
-                </div>
-              </div>
-            ) : (
               <div className="p-6 bg-brand-900/30 border border-brand-800 rounded-2xl">
                 <div className="flex items-center gap-3 mb-2">
                   <ShieldCheck size={18} className="text-brand-accent" />
@@ -737,11 +688,9 @@ export default function ReviewDocument({ navigate, id }) {
                   </h4>
                 </div>
                 <p className="text-[10px] text-slate-500 leading-relaxed">
-                  As a reviewer, your notes will be forwarded to the ultimate
-                  approver for final authorization.
+                  Your notes will be saved to the document record.
                 </p>
               </div>
-            )}
 
             <div className="flex justify-between items-center mt-6">
               <div className="flex items-center gap-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
@@ -810,13 +759,6 @@ export default function ReviewDocument({ navigate, id }) {
               </p>
 
               <div className="space-y-4">
-                <button
-                  onClick={() => handleDecision("RETURN")}
-                  className="w-full py-5 bg-brand-800 hover:bg-brand-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all border border-brand-700"
-                >
-                  <Send size={18} className="text-orange-400" />
-                  Reroute to Reviewer
-                </button>
                 <button
                   onClick={() => handleDecision("REJECT")}
                   className="w-full py-5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all border border-red-500/20"
