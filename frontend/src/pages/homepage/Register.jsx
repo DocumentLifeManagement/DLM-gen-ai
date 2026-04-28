@@ -59,7 +59,7 @@ export default function Register({ navigate }) {
   };
 
   return (
-    <div className="min-h-screen bg-brand-950 flex flex-col font-sans text-slate-300">
+    <div className="min-h-screen bg-transparent flex flex-col font-sans text-slate-300">
       <LandingNavbar navigate={navigate} />
 
       <div className="flex-1 flex items-center justify-center p-4 pt-24 relative overflow-hidden h-screen">

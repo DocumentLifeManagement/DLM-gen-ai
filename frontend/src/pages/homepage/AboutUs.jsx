@@ -7,7 +7,7 @@ import { Users, Target, ShieldCheck } from "lucide-react";
 
 export default function AboutUs({ navigate }) {
     return (
-        <div className="bg-brand-950 min-h-screen text-slate-300 font-sans selection:bg-brand-accent/30 selection:text-white">
+        <div className="bg-transparent min-h-screen text-slate-300 font-sans selection:bg-brand-accent/30 selection:text-white">
             <LandingNavbar navigate={navigate} />
 
             <main className="pt-20">
