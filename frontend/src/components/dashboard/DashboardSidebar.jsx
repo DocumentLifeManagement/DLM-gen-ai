@@ -18,7 +18,7 @@ export default function DashboardSidebar({ role, navigate, activePath, isCollaps
 
     return (
         <div className={clsx(
-            "h-screen bg-brand-950 border-r border-brand-800 flex flex-col transition-all duration-300 z-50",
+            "h-screen bg-transparent border-r border-brand-800 flex flex-col transition-all duration-300 z-50",
             // On mobile, always show full width sidebar when open
             "w-64 md:w-auto",
             // On desktop, toggle between collapsed and expanded

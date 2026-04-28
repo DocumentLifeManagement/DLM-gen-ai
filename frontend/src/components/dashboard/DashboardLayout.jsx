@@ -33,7 +33,7 @@ export default function DashboardLayout({ children, role, navigate, title }) {
     const currentPath = window.location.pathname;
 
     return (
-        <div className="min-h-screen bg-brand-950 text-slate-300 font-sans flex">
+        <div className="min-h-screen bg-transparent text-slate-300 font-sans flex">
             {/* Mobile sidebar overlay backdrop */}
             {isMobileOpen && (
                 <div
