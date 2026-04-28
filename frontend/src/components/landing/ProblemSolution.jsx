@@ -6,7 +6,7 @@ import { AlertTriangle, Check, BrainCircuit, Workflow, FileText } from "lucide-r
 
 export default function ProblemSolution() {
     return (
-        <div className="bg-brand-950">
+        <div className="bg-transparent">
             {/* Problem Section */}
             <Section id="features">
                 <div className="text-center max-w-3xl mx-auto mb-16">

@@ -29,7 +29,7 @@ function Counter({ value, suffix = "" }) {
 
 export default function TechMetricsCTA() {
     return (
-        <div className="bg-brand-950 text-white">
+        <div className="bg-transparent text-white">
             {/* Metrics */}
             <Section id="metrics" className="border-t border-brand-800">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">

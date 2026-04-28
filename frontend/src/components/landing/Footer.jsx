@@ -23,7 +23,7 @@ export default function Footer({ navigate }) {
     };
 
     return (
-        <footer className="bg-brand-950 border-t border-brand-800 py-12">
+        <footer className="bg-transparent border-t border-brand-800 py-12">
             <Section className="!py-0">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
                     {/* Brand */}

@@ -13,7 +13,7 @@ export default function Architecture() {
     ];
 
     return (
-        <Section id="architecture" className="bg-brand-950">
+        <Section id="architecture" className="bg-transparent">
             <div className="text-center mb-16">
                 <ScrollReveal width="100%">
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">

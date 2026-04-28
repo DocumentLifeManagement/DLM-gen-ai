@@ -5,7 +5,7 @@ import { Lock, History, FileCheck, Users } from "lucide-react";
 
 export default function GovernanceDashboard() {
     return (
-        <div className="bg-brand-950 overflow-hidden">
+        <div className="bg-transparent overflow-hidden">
             {/* Governance Badges */}
             <Section id="governance">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-24">
