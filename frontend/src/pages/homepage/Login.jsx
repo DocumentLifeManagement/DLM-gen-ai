@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { API_URL } from "../../api/api";
+
 export default function Login({ navigate }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +35,7 @@ export default function Login({ navigate }) {
       }
 
       const response = await fetch(
-        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/auth/login",
+        `${API_URL}/auth/login`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

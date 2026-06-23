@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import { API_URL } from "../../api/api";
 import clsx from "clsx";
 
 // Forced IST Formatter
@@ -107,7 +108,7 @@ export default function UploaderDashboard({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents",
+        `${API_URL}/documents`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -195,7 +196,7 @@ export default function UploaderDashboard({ navigate }) {
         }, 400);
 
         const res = await fetch(
-          "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/upload-and-analyze",
+          `${API_URL}/upload-and-analyze`,
           {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },
@@ -245,7 +246,7 @@ export default function UploaderDashboard({ navigate }) {
     if (!window.confirm("Are you sure?")) return;
     const token = localStorage.getItem("access_token");
     await fetch(
-      `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}`,
+      `${API_URL}/documents/${id}`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -267,7 +268,7 @@ export default function UploaderDashboard({ navigate }) {
     const token = localStorage.getItem("access_token");
     try {
       const res = await fetch(
-        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/bulk-delete",
+        `${API_URL}/documents/bulk-delete`,
         {
           method: "POST",
           headers: {
@@ -297,7 +298,7 @@ export default function UploaderDashboard({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${doc.id}`,
+        `${API_URL}/documents/${doc.id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },

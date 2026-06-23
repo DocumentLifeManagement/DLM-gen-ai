@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import { API_URL } from "../../api/api";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -107,7 +108,7 @@ export default function AdminDashboard({ navigate, query }) {
 
       // Pass category based on activeTab
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents?category=${activeTab}`,
+        `${API_URL}/documents?category=${activeTab}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -183,7 +184,7 @@ export default function AdminDashboard({ navigate, query }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}`,
+        `${API_URL}/documents/${id}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -210,7 +211,7 @@ export default function AdminDashboard({ navigate, query }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/purge`,
+        `${API_URL}/documents/${id}/purge`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -232,7 +233,7 @@ export default function AdminDashboard({ navigate, query }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/restore`,
+        `${API_URL}/documents/${id}/restore`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}` },
@@ -261,7 +262,7 @@ export default function AdminDashboard({ navigate, query }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/archive`,
+        `${API_URL}/documents/${id}/archive`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}` },
@@ -309,7 +310,7 @@ export default function AdminDashboard({ navigate, query }) {
     const token = localStorage.getItem("access_token");
     try {
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${endpoint}`,
+        `${API_URL}/documents/${endpoint}`,
         {
           method: "POST",
           headers: {

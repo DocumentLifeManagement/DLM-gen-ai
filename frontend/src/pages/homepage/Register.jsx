@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
+import { API_URL } from "../../api/api";
+
 export default function Register({ navigate }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,7 +34,7 @@ export default function Register({ navigate }) {
       }
 
       const response = await fetch(
-        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/auth/register",
+        `${API_URL}/auth/register`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import { API_URL } from "../../api/api";
 import Button from "../../components/landing/Button";
 import {
   Users,
@@ -49,7 +50,7 @@ export default function UserManagement({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/users",
+        `${API_URL}/users`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -91,7 +92,7 @@ export default function UserManagement({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/users",
+        `${API_URL}/users`,
         {
           method: "POST",
           headers: {
@@ -133,7 +134,7 @@ export default function UserManagement({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/users/${userId}`,
+        `${API_URL}/users/${userId}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -166,7 +167,7 @@ export default function UserManagement({ navigate }) {
       }
 
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/users/${editingUser.id}`,
+        `${API_URL}/users/${editingUser.id}`,
         {
           method: "PUT",
           headers: {

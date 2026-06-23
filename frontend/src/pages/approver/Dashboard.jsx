@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import { API_URL } from "../../api/api";
 
 // Forced IST Formatter
 const formatIST = (date, type = "both") => {
@@ -88,7 +89,7 @@ export default function ApproverDashboard({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents",
+        `${API_URL}/documents`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -140,9 +141,6 @@ export default function ApproverDashboard({ navigate }) {
     setLoadingSearch(true);
     try {
       const token = localStorage.getItem("access_token");
-      const API_URL =
-        import.meta.env.VITE_API_URL ||
-        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1";
       const res = await fetch(
         `${API_URL}/search?query=${encodeURIComponent(search)}&role=APPROVER`,
         { headers: { Authorization: `Bearer ${token}` } },
@@ -166,7 +164,7 @@ export default function ApproverDashboard({ navigate }) {
       );
 
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/approve`,
+        `${API_URL}/documents/${id}/approve`,
         {
           method: "POST",
           headers: {
@@ -196,7 +194,7 @@ export default function ApproverDashboard({ navigate }) {
       );
 
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/reject`,
+        `${API_URL}/documents/${id}/reject`,
         {
           method: "POST",
           headers: {

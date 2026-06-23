@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import { API_URL } from "../../api/api";
 
 // Forced IST Formatter
 const formatIST = (dateStr) => {
@@ -73,7 +74,7 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}`,
+        `${API_URL}/documents/${id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -100,7 +101,7 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/lifecycle`,
+        `${API_URL}/documents/${id}/lifecycle`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -131,7 +132,7 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/update-fields`,
+        `${API_URL}/documents/${id}/update-fields`,
         {
           method: "PUT",
           headers: {
@@ -180,7 +181,7 @@ export default function ReviewDocument({ navigate, id }) {
       }
 
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${docId}/${endpoint}`,
+        `${API_URL}/documents/${docId}/${endpoint}`,
         {
           method: "POST",
           headers: {
@@ -210,7 +211,7 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/generate-summary/${id}`,
+        `${API_URL}/generate-summary/${id}`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },

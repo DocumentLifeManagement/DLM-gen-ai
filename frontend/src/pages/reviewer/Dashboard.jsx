@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import { API_URL } from "../../api/api";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -91,7 +92,7 @@ export default function ReviewerDashboard({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents",
+        `${API_URL}/documents`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -150,10 +151,6 @@ export default function ReviewerDashboard({ navigate }) {
     setLoadingSearch(true);
     try {
       const token = localStorage.getItem("access_token");
-      // Use local backend URL for testing, fallback to railway
-      const API_URL =
-        import.meta.env.VITE_API_URL ||
-        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1";
       const res = await fetch(
         `${API_URL}/search?query=${encodeURIComponent(search)}&role=REVIEWER`,
         { headers: { Authorization: `Bearer ${token}` } },
@@ -181,7 +178,7 @@ export default function ReviewerDashboard({ navigate }) {
 
     try {
       const res = await fetch(
-        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/review`,
+        `${API_URL}/documents/${id}/review`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },

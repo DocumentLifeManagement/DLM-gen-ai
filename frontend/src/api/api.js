@@ -1,4 +1,7 @@
-const BASE_URL = import.meta.env.VITE_API_URL + "/api/v1";
+const rawApiUrl = import.meta.env.VITE_API_URL || "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1";
+export const API_URL = rawApiUrl.endsWith("/api/v1") ? rawApiUrl : `${rawApiUrl}/api/v1`;
+
+const BASE_URL = API_URL;
 
 export const uploadAndAnalyze = async (file) => {
   const formData = new FormData();
