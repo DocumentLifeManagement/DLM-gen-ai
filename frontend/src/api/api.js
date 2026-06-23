@@ -1,4 +1,10 @@
-const rawApiUrl = import.meta.env.VITE_API_URL || "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1";
+let rawApiUrl = import.meta.env.VITE_API_URL || "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1";
+
+// Safeguard against the old/incorrect Vercel environment variable setting
+if (rawApiUrl.includes("dlm-gen-ai-production.up.railway.app")) {
+  rawApiUrl = rawApiUrl.replace("dlm-gen-ai-production.up.railway.app", "dlm-gen-ai-production-2f7c.up.railway.app");
+}
+
 export const API_URL = rawApiUrl.endsWith("/api/v1") ? rawApiUrl : `${rawApiUrl}/api/v1`;
 
 const BASE_URL = API_URL;
