@@ -129,8 +129,8 @@ graph TD
 
 Once the backend is running, you can access the interactive API docs at:
 
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+- **Swagger UI**: `https://dlm-gen-ai-production-2f7c.up.railway.app/docs`
+- **ReDoc**: `https://dlm-gen-ai-production-2f7c.up.railway.app/redoc`
 
 ### Core Endpoints
 

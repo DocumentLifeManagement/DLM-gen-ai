@@ -90,9 +90,12 @@ export default function ReviewerDashboard({ navigate }) {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("http://localhost:8000/api/v1/documents", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (!res.ok) throw new Error("Failed to fetch documents");
 
@@ -149,7 +152,8 @@ export default function ReviewerDashboard({ navigate }) {
       const token = localStorage.getItem("access_token");
       // Use local backend URL for testing, fallback to railway
       const API_URL =
-        import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+        import.meta.env.VITE_API_URL ||
+        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1";
       const res = await fetch(
         `${API_URL}/search?query=${encodeURIComponent(search)}&role=REVIEWER`,
         { headers: { Authorization: `Bearer ${token}` } },
@@ -177,7 +181,7 @@ export default function ReviewerDashboard({ navigate }) {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/review`,
+        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/review`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -333,7 +337,7 @@ export default function ReviewerDashboard({ navigate }) {
           >
             <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
           </button>
-          
+
           {activeTab === "active" && (
             <div className="relative flex-1 md:flex-none">
               <Filter

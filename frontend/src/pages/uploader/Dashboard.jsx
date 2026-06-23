@@ -106,9 +106,12 @@ export default function UploaderDashboard({ navigate }) {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("http://localhost:8000/api/v1/documents", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       if (!res.ok) throw new Error("Failed to load documents");
       const data = await res.json();
       setDocuments(data);
@@ -192,7 +195,7 @@ export default function UploaderDashboard({ navigate }) {
         }, 400);
 
         const res = await fetch(
-          "http://localhost:8000/api/v1/upload-and-analyze",
+          "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/upload-and-analyze",
           {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },
@@ -241,10 +244,13 @@ export default function UploaderDashboard({ navigate }) {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure?")) return;
     const token = localStorage.getItem("access_token");
-    await fetch(`http://localhost:8000/api/v1/documents/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await fetch(
+      `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
     setDocuments(documents.filter((doc) => doc.id !== id));
     setSelectedIds(selectedIds.filter((sid) => sid !== id));
     showToast("Document deleted");
@@ -261,7 +267,7 @@ export default function UploaderDashboard({ navigate }) {
     const token = localStorage.getItem("access_token");
     try {
       const res = await fetch(
-        "http://localhost:8000/api/v1/documents/bulk-delete",
+        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/bulk-delete",
         {
           method: "POST",
           headers: {
@@ -291,7 +297,7 @@ export default function UploaderDashboard({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${doc.id}`,
+        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${doc.id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -856,7 +862,9 @@ export default function UploaderDashboard({ navigate }) {
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-10 h-10 border-4 border-brand-accent border-t-transparent rounded-full animate-spin" />
                     </div>
-                  ) : previewDoc.filename?.match(/\.(jpeg|jpg|gif|png|webp|bmp)$/i) ? (
+                  ) : previewDoc.filename?.match(
+                      /\.(jpeg|jpg|gif|png|webp|bmp)$/i,
+                    ) ? (
                     <img
                       src={previewDoc.s3_url}
                       className="w-full h-full object-contain bg-white"
@@ -870,8 +878,6 @@ export default function UploaderDashboard({ navigate }) {
                   )}
                 </div>
                 <div className="flex-1 space-y-4 md:space-y-6 overflow-y-auto custom-scrollbar max-h-[40vh] lg:max-h-none">
-
-
                   <div className="p-6 bg-brand-accent/5 border border-brand-accent/10 rounded-2xl">
                     <h4 className="text-[10px] font-black text-brand-accent uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                       <ShieldCheck size={14} /> System Metadata

@@ -72,9 +72,12 @@ export default function ReviewDocument({ navigate, id }) {
   const fetchDocument = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://localhost:8000/api/v1/documents/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (!res.ok) throw new Error("Failed to fetch document details");
 
@@ -97,7 +100,7 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/lifecycle`,
+        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/lifecycle`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -128,7 +131,7 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/update-fields`,
+        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/update-fields`,
         {
           method: "PUT",
           headers: {
@@ -153,7 +156,6 @@ export default function ReviewDocument({ navigate, id }) {
   };
 
   const handleDecision = async (decisionType) => {
-
     if (isDirty) {
       const saved = await handleSaveChanges(true);
       if (!saved) return;
@@ -178,7 +180,7 @@ export default function ReviewDocument({ navigate, id }) {
       }
 
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${docId}/${endpoint}`,
+        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${docId}/${endpoint}`,
         {
           method: "POST",
           headers: {
@@ -208,7 +210,7 @@ export default function ReviewDocument({ navigate, id }) {
     try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(
-        `http://localhost:8000/api/v1/generate-summary/${id}`,
+        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/generate-summary/${id}`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -369,7 +371,9 @@ export default function ReviewDocument({ navigate, id }) {
               </button>
             </div>
             <div className="flex-1 bg-brand-950/80 p-2 overflow-hidden flex items-center justify-center">
-              {documentData.filename?.match(/\.(jpeg|jpg|gif|png|webp|bmp)$/i) ? (
+              {documentData.filename?.match(
+                /\.(jpeg|jpg|gif|png|webp|bmp)$/i,
+              ) ? (
                 <img
                   src={documentData.s3_url}
                   alt="Evidence Preview"
@@ -680,17 +684,17 @@ export default function ReviewDocument({ navigate, id }) {
           </div>
 
           <div className="w-full md:w-[400px] flex flex-col justify-between py-1">
-              <div className="p-6 bg-brand-900/30 border border-brand-800 rounded-2xl">
-                <div className="flex items-center gap-3 mb-2">
-                  <ShieldCheck size={18} className="text-brand-accent" />
-                  <h4 className="text-xs font-black text-white uppercase">
-                    Verification Mode
-                  </h4>
-                </div>
-                <p className="text-[10px] text-slate-500 leading-relaxed">
-                  Your notes will be saved to the document record.
-                </p>
+            <div className="p-6 bg-brand-900/30 border border-brand-800 rounded-2xl">
+              <div className="flex items-center gap-3 mb-2">
+                <ShieldCheck size={18} className="text-brand-accent" />
+                <h4 className="text-xs font-black text-white uppercase">
+                  Verification Mode
+                </h4>
               </div>
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                Your notes will be saved to the document record.
+              </p>
+            </div>
 
             <div className="flex justify-between items-center mt-6">
               <div className="flex items-center gap-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">

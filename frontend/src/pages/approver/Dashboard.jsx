@@ -87,11 +87,14 @@ export default function ApproverDashboard({ navigate }) {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("http://localhost:8000/api/v1/documents", {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const res = await fetch(
+        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       if (!res.ok) throw new Error("Failed to fetch documents");
 
@@ -138,7 +141,8 @@ export default function ApproverDashboard({ navigate }) {
     try {
       const token = localStorage.getItem("access_token");
       const API_URL =
-        import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+        import.meta.env.VITE_API_URL ||
+        "https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1";
       const res = await fetch(
         `${API_URL}/search?query=${encodeURIComponent(search)}&role=APPROVER`,
         { headers: { Authorization: `Bearer ${token}` } },
@@ -162,7 +166,7 @@ export default function ApproverDashboard({ navigate }) {
       );
 
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/approve`,
+        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/approve`,
         {
           method: "POST",
           headers: {
@@ -192,7 +196,7 @@ export default function ApproverDashboard({ navigate }) {
       );
 
       const res = await fetch(
-        `http://localhost:8000/api/v1/documents/${id}/reject`,
+        `https://dlm-gen-ai-production-2f7c.up.railway.app/api/v1/documents/${id}/reject`,
         {
           method: "POST",
           headers: {
@@ -306,7 +310,7 @@ export default function ApproverDashboard({ navigate }) {
           >
             <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
           </button>
-          
+
           <div className="relative flex-1 md:flex-none">
             <Filter
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
